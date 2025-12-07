@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Статус запроса #{{ book_request.id }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .status-card {
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 2rem;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .status-icon {
+            font-size: 5rem;
+            margin-bottom: 1rem;
+        }
+        .status-badge {
+            font-size: 1.2em;
+            padding: 0.5em 1em;
+        }
+        .status-waiting { 
+            background-color: #fff3cd; 
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .status-issued { 
+            background-color: #d1ecf1; 
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .status-returned { 
+            background-color: #d4edda; 
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .timeline {
+            position: relative;
+            padding-left: 30px;
+            margin: 20px 0;
+        }
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background-color: #dee2e6;
+        }
+        .timeline-item {
+            position: relative;
+            margin-bottom: 20px;
+        }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -23px;
+            top: 5px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #6c757d;
+        }
+        .timeline-item.active::before {
+            background-color: #0d6efd;
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.2);
+        }
+        .timeline-item.completed::before {
+            background-color: #198754;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="status-card">
+            <!-- Заголовок с номером -->
+            <div class="text-center mb-4">
+                <h3>Запрос #{{ book_request.id }}</h3>
+                <p class="text-muted">Детали вашего запроса на книгу</p>
+            </div>
+            
+            <!-- Статус -->
+            <div class="text-center mb-4">
+                {% if book_request.status == 'ожидание' %}
+                    <div class="status-icon status-waiting">
+                        <i class="bi bi-clock-history"></i>
+                    </div>
+                    <h4><span class="badge status-badge status-waiting">Ожидание подтверждения</span></h4>
+                    <p class="text-muted">Ваш запрос ожидает обработки библиотекарем</p>
+                    
+                {% elif book_request.status == 'выдано' %}
+                    <div class="status-icon status-issued">
+                        <i class="bi bi-check-circle"></i>
+                    </div>
+                    <h4><span class="badge status-badge status-issued">Книга выдана</span></h4>
+                    <p class="text-muted">Книга выдана, можете забирать</p>
+                    
+                {% elif book_request.status == 'возвращено' %}
+                    <div class="status-icon status-returned">
+                        <i class="bi bi-arrow-return-left"></i>
+                    </div>
+                    <h4><span class="badge status-badge status-returned">Книга возвращена</span></h4>
+                    <p class="text-muted">Книга успешно возвращена в библиотеку</p>
+                {% endif %}
+            </div>
+            
+            <!-- Детали -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="bi bi-info-circle"></i> Детали запроса
+                </div>
+                <div class="card-body">
+                    <table class="table">
+                        <tr>
+                            <th width="40%">Студент:</th>
+                            <td>{{ book_request.student.full_name if book_request.student else 'Неизвестно' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Группа:</th>
+                            <td>
+                                {% if book_request.student and book_request.student.group %}
+                                    {{ book_request.student.group.name }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Книга:</th>
+                            <td>
+                                {% if book_request.book %}
+                                    {{ book_request.book.name }} ({{ book_request.book.author }})
+                                {% else %}
+                                    Книга удалена
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Количество:</th>
+                            <td>{{ book_request.quantity }} экз.</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Таймлайн -->
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-calendar-event"></i> История статусов
+                </div>
+                <div class="card-body">
+                    <div class="timeline">
+                        <!-- Запрос создан -->
+                        <div class="timeline-item {% if book_request.status != 'ожидание' %}completed{% else %}active{% endif %}">
+                            <strong>Запрос создан</strong>
+                            <div class="text-muted small">
+                                {{ book_request.request_date.strftime('%d.%m.%Y %H:%M') if book_request.request_date else 'Дата не указана' }}
+                            </div>
+                        </div>
+                        
+                        <!-- Выдано -->
+                        {% if book_request.issue_date %}
+                        <div class="timeline-item {% if book_request.status == 'выдано' %}active{% elif book_request.status == 'возвращено' %}completed{% endif %}">
+                            <strong>Книга выдана</strong>
+                            <div class="text-muted small">
+                                {{ book_request.issue_date.strftime('%d.%m.%Y %H:%M') if book_request.issue_date else 'Дата не указана' }}
+                            </div>
+                            {% if book_request.planned_return_date %}
+                            <div class="text-muted small">
+                                Вернуть до: {{ book_request.planned_return_date.strftime('%d.%m.%Y %H:%M') }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Возвращено -->
+                        {% if book_request.actual_return_date %}
+                        <div class="timeline-item completed">
+                            <strong>Книга возвращена</strong>
+                            <div class="text-muted small">
+                                {{ book_request.actual_return_date.strftime('%d.%m.%Y %H:%M') if book_request.actual_return_date else 'Дата не указана' }}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Кнопки -->
+            <div class="mt-4 text-center">
+                <a href="{{ url_for('check_status') }}" class="btn btn-outline-primary me-2">
+                    <i class="bi bi-search"></i> Проверить другой запрос
+                </a>
+                <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-house"></i> На главную
+                </a>
+                <button onclick="window.print()" class="btn btn-outline-success ms-2">
+                    <i class="bi bi-printer"></i> Распечатать
+                </button>
+            </div>
+            
+            <!-- Автообновление (для ожидающих) -->
+            {% if book_request.status == 'ожидание' %}
+            <div class="mt-3 text-center">
+                <small class="text-muted">
+                    <i class="bi bi-arrow-clockwise"></i> Страница обновится автоматически при изменении статуса
+                </small>
+            </div>
+            <script>
+                // Автообновление каждые 30 секунд для ожидающих запросов
+                setTimeout(function() {
+                    location.reload();
+                }, 30000); // 30 секунд
+            </script>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

@@ -117,6 +117,51 @@
                     <!-- ... вся форма ... -->
                 </form>
                 
+                <!-- Модальное окно для номера запроса -->
+                <div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header bg-success text-white">
+                                <h5 class="modal-title">
+                                    <i class="bi bi-check-circle-fill"></i> Запрос отправлен успешно!
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body text-center">
+                                <div class="mb-3">
+                                    <i class="bi bi-journal-check display-1 text-success"></i>
+                                </div>
+                                <h4 id="requestNumber" class="mb-3">Запрос #<span id="requestId"></span></h4>
+                                <p class="lead">Ожидайте подтверждения библиотекаря</p>
+                                <div class="alert alert-info">
+                                    <i class="bi bi-info-circle"></i> 
+                                    <strong>Сохраните номер запроса!</strong><br>
+                                    Он понадобится для проверки статуса
+                                </div>
+                                <div class="d-grid gap-2 mt-3">
+                                    <a href="{{ url_for('check_status') }}" class="btn btn-primary">
+                                        <i class="bi bi-search"></i> Проверить статус запроса
+                                    </a>
+                                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                                        <i class="bi bi-x-circle"></i> Закрыть
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- После формы, перед сообщениями об ошибках -->
+                <div class="card mt-4">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-search"></i> Проверить статус запроса</h5>
+                        <p class="card-text">Уже отправили запрос и хотите узнать его статус?</p>
+                        <a href="{{ url_for('check_status') }}" class="btn btn-outline-primary">
+                            <i class="bi bi-search"></i> Проверить статус
+                        </a>
+                    </div>
+                </div>
+
                 <!-- === ДОБАВИТЬ ЭТО ЗДЕСЬ === -->
                 <div id="error-message" class="alert alert-danger mt-3" style="display: none;"></div>
                 <div id="success-message" class="alert alert-success mt-3" style="display: none;"></div>

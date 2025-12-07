@@ -161,7 +161,8 @@ def request_book():
         db.session.add(new_request)
         db.session.commit()
         
-        return "✅ Запрос отправлен! Ожидайте подтверждения библиотекаря."
+        # Просто возвращаем сообщение с номером
+        return f"✅ Запрос #{new_request.id} отправлен! Ожидайте подтверждения библиотекаря. Номер запроса: {new_request.id}"
         
     except ValueError:
         return "Ошибка: Неверное количество", 400
@@ -311,6 +312,61 @@ def reject_request(request_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
+    
+@app.route('/check-status', methods=['GET', 'POST'])
+def check_status():
+    """Страница проверки статуса запроса"""
+    if request.method == 'POST':
+        request_id = request.form.get('request_id', '').strip()
+        
+        if not request_id:
+            flash('Введите номер запроса')
+            return redirect(url_for('check_status'))
+        
+        try:
+            request_id_int = int(request_id)
+        except ValueError:
+            flash('Некорректный номер запроса')
+            return redirect(url_for('check_status'))
+        
+        # Ищем запрос
+        book_request = BookRequest.query.get(request_id_int)
+        
+        if not book_request:
+            flash('Запрос не найден')
+            return redirect(url_for('check_status'))
+        
+        # Показываем страницу с результатом
+        return render_template('status_result.html', book_request=book_request)
+    
+    # GET запрос - показываем форму
+    return render_template('check_status.html')
+
+@app.route('/api/request-status/<int:request_id>')
+def api_request_status(request_id):
+    """API для получения статуса запроса (можно использовать для AJAX)"""
+    book_request = BookRequest.query.get(request_id)
+    
+    if not book_request:
+        return jsonify({'error': 'Запрос не найден'}), 404
+    
+    # Форматируем даты
+    dates = {}
+    if book_request.request_date:
+        dates['request_date'] = book_request.request_date.strftime('%d.%m.%Y %H:%M')
+    if book_request.issue_date:
+        dates['issue_date'] = book_request.issue_date.strftime('%d.%m.%Y %H:%M')
+    if book_request.actual_return_date:
+        dates['return_date'] = book_request.actual_return_date.strftime('%d.%m.%Y %H:%M')
+    
+    return jsonify({
+        'id': book_request.id,
+        'status': book_request.status,
+        'student_name': book_request.student.full_name if book_request.student else 'Неизвестно',
+        'book_name': book_request.book.name if book_request.book else 'Книга удалена',
+        'quantity': book_request.quantity,
+        'dates': dates
+    })
 
 # Запуск приложения
 if __name__ == '__main__':
