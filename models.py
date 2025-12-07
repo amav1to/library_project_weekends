@@ -75,7 +75,7 @@ class BookRequest(db.Model):
     __tablename__ = 'book_requests'
     
     id = db.Column(db.Integer, primary_key=True)
-    
+    request_number = db.Column(db.String(20), unique=True, nullable=True)
     # Ссылки на студента и книгу
     student_id = db.Column(db.Integer, db.ForeignKey('students.id'), nullable=False)
     book_id = db.Column(db.Integer, db.ForeignKey('books.id'), nullable=False)

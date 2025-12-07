@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <!-- То же самое что в check_status.html -->
+</head>
+<body>
+    <div class="container">
+        <div class="status-container">
+            <h2 class="text-center mb-4">
+                <i class="bi bi-search"></i> Проверка статуса запроса
+            </h2>
+            
+            <!-- Форма для нового поиска -->
+            <form method="POST" action="{{ url_for('check_status') }}">
+                <div class="mb-3">
+                    <label for="request_id" class="form-label">Номер запроса:</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="request_id" name="request_id" 
+                               placeholder="Например: 140324-001" 
+                               value="{{ request_input if request_input else '' }}">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-search"></i> Проверить
+                        </button>
+                    </div>
+                </div>
+            </form>
+            
+            <!-- Результат (если есть) -->
+            {% if book_request %}
+            <div class="card mt-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        Результат для запроса 
+                        <strong>{% if book_request.request_number %}{{ book_request.request_number }}{% else %}#{{ book_request.id }}{% endif %}</strong>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        {% if book_request.status == 'ожидание' %}
+                            <div class="status-icon status-waiting">
+                                <i class="bi bi-clock-history"></i>
+                            </div>
+                            <h4><span class="badge bg-warning">Ожидание подтверждения</span></h4>
+                        {% elif book_request.status == 'выдано' %}
+                            <div class="status-icon status-issued">
+                                <i class="bi bi-check-circle"></i>
+                            </div>
+                            <h4><span class="badge bg-primary">Книга выдана</span></h4>
+                        {% elif book_request.status == 'возвращено' %}
+                            <div class="status-icon status-returned">
+                                <i class="bi bi-arrow-return-left"></i>
+                            </div>
+                            <h4><span class="badge bg-success">Книга возвращена</span></h4>
+                        {% endif %}
+                    </div>
+                    
+                    <table class="table table-sm">
+                        <tr>
+                            <th width="40%">Студент:</th>
+                            <td>{{ book_request.student.full_name if book_request.student else 'Неизвестно' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Книга:</th>
+                            <td>{{ book_request.book.name if book_request.book else 'Книга удалена' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Дата запроса:</th>
+                            <td>{{ book_request.request_date.strftime('%d.%m.%Y %H:%M') if book_request.request_date else '-' }}</td>
+                        </tr>
+                    </table>
+                    
+                    <div class="text-center mt-3">
+                        <a href="{{ url_for('status_result', request_id=book_request.id) }}" 
+                           class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-info-circle"></i> Подробнее
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Кнопки -->
+            <div class="mt-4">
+                <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Вернуться на главную
+                </a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

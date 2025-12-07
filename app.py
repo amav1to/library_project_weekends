@@ -149,20 +149,41 @@ def request_book():
         if book.language != student_group.language or book.course != student_group.course:
             return "Ошибка: Эта книга не предназначена для вашей группы", 400
         
-        # 5. Создаем запись в журнале
+        # 5. ГЕНЕРИРУЕМ НОМЕР ЗАПРОСА (НОВОЕ!)
+        today = datetime.now().strftime('%d%m%y')  # Формат: ДДММГГ (14 марта 2024 → 140324)
+        
+        # Ищем последний номер за сегодня
+        last_request = BookRequest.query.filter(
+            BookRequest.request_number.like(f'{today}-%')
+        ).order_by(BookRequest.id.desc()).first()
+        
+        if last_request and last_request.request_number:
+            # Извлекаем номер из строки "140324-001"
+            # split('-') → ["140324", "001"]
+            last_number = int(last_request.request_number.split('-')[1])
+            next_number = last_number + 1
+        else:
+            # Первый запрос за сегодня
+            next_number = 1
+        
+        # Форматируем номер с ведущими нулями: 001, 002, ...
+        request_number = f'{today}-{next_number:03d}'  # Пример: "140324-001"
+        
+        # 6. Создаем запись в журнале
         new_request = BookRequest(
             student_id=student_id,
             book_id=book_id,
             quantity=quantity,
             status='ожидание',
-            request_date=datetime.now()
+            request_date=datetime.now(),
+            request_number=request_number  # ← СОХРАНЯЕМ НОВЫЙ НОМЕР
         )
         
         db.session.add(new_request)
         db.session.commit()
         
-        # Просто возвращаем сообщение с номером
-        return f"✅ Запрос #{new_request.id} отправлен! Ожидайте подтверждения библиотекаря. Номер запроса: {new_request.id}"
+        # 7. Возвращаем сообщение с номером запроса
+        return f"✅ Запрос {request_number} отправлен! Ожидайте подтверждения библиотекаря."
         
     except ValueError:
         return "Ошибка: Неверное количество", 400
@@ -313,35 +334,6 @@ def reject_request(request_id):
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
     
-@app.route('/check-status', methods=['GET', 'POST'])
-def check_status():
-    """Страница проверки статуса запроса"""
-    if request.method == 'POST':
-        request_id = request.form.get('request_id', '').strip()
-        
-        if not request_id:
-            flash('Введите номер запроса')
-            return redirect(url_for('check_status'))
-        
-        try:
-            request_id_int = int(request_id)
-        except ValueError:
-            flash('Некорректный номер запроса')
-            return redirect(url_for('check_status'))
-        
-        # Ищем запрос
-        book_request = BookRequest.query.get(request_id_int)
-        
-        if not book_request:
-            flash('Запрос не найден')
-            return redirect(url_for('check_status'))
-        
-        # Показываем страницу с результатом
-        return render_template('status_result.html', book_request=book_request)
-    
-    # GET запрос - показываем форму
-    return render_template('check_status.html')
-
 @app.route('/api/request-status/<int:request_id>')
 def api_request_status(request_id):
     """API для получения статуса запроса (можно использовать для AJAX)"""
@@ -367,6 +359,56 @@ def api_request_status(request_id):
         'quantity': book_request.quantity,
         'dates': dates
     })
+
+@app.route('/check-status', methods=['GET', 'POST'])
+def check_status():
+    """Страница проверки статуса запроса"""
+    print("=== check_status ===")
+    
+    request_input = None
+    
+    if request.method == 'POST':
+        request_input = request.form.get('request_id', '').strip()
+        print(f"POST запрос: {request_input}")
+    else:
+        # GET запрос - проверяем параметр в URL
+        request_input = request.args.get('request_id', '').strip()
+        print(f"GET запрос: {request_input}")
+    
+    # Если есть номер в запросе
+    if request_input:
+        # Убираем # если есть
+        if request_input.startswith('#'):
+            request_input = request_input[1:]
+        
+        print(f"Ищем запрос: '{request_input}'")
+        
+        # 1. Ищем по request_number
+        book_request = BookRequest.query.filter_by(request_number=request_input).first()
+        
+        # 2. Если не нашли, ищем по ID
+        if not book_request:
+            try:
+                request_id_int = int(request_input)
+                book_request = BookRequest.query.get(request_id_int)
+            except ValueError:
+                pass
+        
+        if book_request:
+            print(f"✅ Найден запрос: {book_request.request_number}")
+            return render_template('status_result.html', book_request=book_request)
+        else:
+            print(f"❌ Запрос не найден: {request_input}")
+            flash('Запрос не найден')
+    
+    # Показываем форму
+    return render_template('check_status.html')
+
+@app.route('/status/<int:request_id>')
+def status_result(request_id):
+    """Детальная страница статуса запроса"""
+    book_request = BookRequest.query.get_or_404(request_id)
+    return render_template('status_result.html', book_request=book_request)
 
 # Запуск приложения
 if __name__ == '__main__':

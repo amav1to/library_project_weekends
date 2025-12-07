@@ -371,28 +371,32 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Функция показа модального окна с номером запроса
 function showSuccessModal(message) {
-    // Парсим номер запроса из сообщения
-    const match = message.match(/#(\d+)/);
+    console.log('Показываем успех:', message);
+    
+    // Ищем номер в сообщении (формат: 071225-001)
+    const match = message.match(/(\d{6}-\d{3})/); // Ищем ДДММГГ-XXX
+    
     if (match) {
-        const requestId = match[1];
-        document.getElementById('requestId').textContent = requestId;
+        const requestId = match[1]; // 071225-001
+        console.log('Найден номер запроса:', requestId);
+        
+        // Заполняем номер в модальном окне
+        const requestIdElement = document.getElementById('requestId');
+        if (requestIdElement) {
+            requestIdElement.textContent = '#' + requestId; // → #071225-001
+        }
         
         // Показываем модальное окно
-        const successModal = new bootstrap.Modal(document.getElementById('successModal'));
-        successModal.show();
-    } 
-    // Если сообщение начинается с "success:"
-    else if (message.startsWith('success:')) {
-        const cleanMessage = message.replace('success:', '');
-        // Можно вывести в модальное окно
-        document.getElementById('requestId').textContent = '...';
-        const successModal = new bootstrap.Modal(document.getElementById('successModal'));
-        successModal.show();
-    }
-    else {
-        // Если не нашли номер - показываем обычное сообщение
-        document.getElementById('success-message').textContent = message;
-        document.getElementById('success-message').style.display = 'block';
+        const successModalElement = document.getElementById('successModal');
+        if (successModalElement) {
+            const successModal = new bootstrap.Modal(successModalElement);
+            successModal.show();
+        } else {
+            alert('Запрос отправлен! Номер: ' + requestId);
+        }
+    } else {
+        console.log('Номер не найден в сообщении:', message);
+        alert(message);
     }
 }
 

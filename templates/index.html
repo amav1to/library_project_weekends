@@ -117,13 +117,13 @@
                     <!-- ... вся форма ... -->
                 </form>
                 
-                <!-- Модальное окно для номера запроса -->
+                <!-- Модальное окно для успешной отправки -->
                 <div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true">
-                    <div class="modal-dialog">
+                    <div class="modal-dialog modal-dialog-centered">
                         <div class="modal-content">
                             <div class="modal-header bg-success text-white">
                                 <h5 class="modal-title">
-                                    <i class="bi bi-check-circle-fill"></i> Запрос отправлен успешно!
+                                    <i class="bi bi-check-circle-fill"></i> Успешно!
                                 </h5>
                                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                             </div>
@@ -131,33 +131,42 @@
                                 <div class="mb-3">
                                     <i class="bi bi-journal-check display-1 text-success"></i>
                                 </div>
-                                <h4 id="requestNumber" class="mb-3">Запрос #<span id="requestId"></span></h4>
+                                <h4 class="mb-3">Запрос <span id="requestId" class="text-primary">#</span> отправлен</h4>
                                 <p class="lead">Ожидайте подтверждения библиотекаря</p>
+                                
                                 <div class="alert alert-info">
                                     <i class="bi bi-info-circle"></i> 
                                     <strong>Сохраните номер запроса!</strong><br>
                                     Он понадобится для проверки статуса
                                 </div>
-                                <div class="d-grid gap-2 mt-3">
-                                    <a href="{{ url_for('check_status') }}" class="btn btn-primary">
-                                        <i class="bi bi-search"></i> Проверить статус запроса
-                                    </a>
-                                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-                                        <i class="bi bi-x-circle"></i> Закрыть
-                                    </button>
-                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                    <i class="bi bi-x-circle"></i> Закрыть
+                                </button>
+                                <button type="button" class="btn btn-primary" id="checkStatusBtn">
+                                    <i class="bi bi-search"></i> Проверить статус
+                                </button>
                             </div>
                         </div>
                     </div>
                 </div>
+
+                <!-- Обработчик для кнопки "Проверить статус" в модальном окне -->
+                <script>
+                    document.getElementById('checkStatusBtn').addEventListener('click', function() {
+                        // Просто открываем страницу без номера
+                        window.location.href = '/check-status';
+                    });
+                </script>
 
                 <!-- После формы, перед сообщениями об ошибках -->
                 <div class="card mt-4">
                     <div class="card-body">
                         <h5 class="card-title"><i class="bi bi-search"></i> Проверить статус запроса</h5>
                         <p class="card-text">Уже отправили запрос и хотите узнать его статус?</p>
-                        <a href="{{ url_for('check_status') }}" class="btn btn-outline-primary">
-                            <i class="bi bi-search"></i> Проверить статус
+                        <a href="#" id="checkStatusBtn" class="btn btn-primary">
+                            <i class="bi bi-search"></i> Проверить статус запроса
                         </a>
                     </div>
                 </div>
@@ -170,6 +179,30 @@
             </div> <!-- закрывающий div контейнера -->
             
             <!-- ... скрипты ... -->
+
+            <!-- Обработчик для кнопки "Проверить статус" в модальном окне -->
+            <script>
+                document.getElementById('checkStatusBtn').addEventListener('click', function() {
+                    const requestIdElement = document.getElementById('requestId');
+                    if (requestIdElement && requestIdElement.textContent) {
+                        // Получаем номер вида "#071225-001"
+                        const fullText = requestIdElement.textContent;
+                        console.log('Текст номера:', fullText);
+                        
+                        // Извлекаем чистый номер
+                        let requestId = fullText;
+                        if (fullText.startsWith('#')) {
+                            requestId = fullText.substring(1); // Убираем #
+                        }
+                        
+                        console.log('Чистый номер:', requestId);
+                        window.location.href = '/check-status?request_id=' + encodeURIComponent(requestId);
+                    } else {
+                        // Если нет номера - показываем первый запрос
+                        window.location.href = '/check-status?request_id=071225-001';
+                    }
+                });
+            </script>
         </body>
         </html>
     </div>
