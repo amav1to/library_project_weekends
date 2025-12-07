@@ -341,8 +341,8 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(result => {
                 // Проверяем статус ответа
                 if (result.ok) {
-                    document.getElementById('success-message').textContent = result.text;
-                    document.getElementById('success-message').style.display = 'block';
+                    // Показываем модальное окно с номером запроса
+                    showSuccessModal(result.text);
                     
                     // Очищаем форму после успешной отправки
                     form.reset();
@@ -368,6 +368,33 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// Функция показа модального окна с номером запроса
+function showSuccessModal(message) {
+    // Парсим номер запроса из сообщения
+    const match = message.match(/#(\d+)/);
+    if (match) {
+        const requestId = match[1];
+        document.getElementById('requestId').textContent = requestId;
+        
+        // Показываем модальное окно
+        const successModal = new bootstrap.Modal(document.getElementById('successModal'));
+        successModal.show();
+    } 
+    // Если сообщение начинается с "success:"
+    else if (message.startsWith('success:')) {
+        const cleanMessage = message.replace('success:', '');
+        // Можно вывести в модальное окно
+        document.getElementById('requestId').textContent = '...';
+        const successModal = new bootstrap.Modal(document.getElementById('successModal'));
+        successModal.show();
+    }
+    else {
+        // Если не нашли номер - показываем обычное сообщение
+        document.getElementById('success-message').textContent = message;
+        document.getElementById('success-message').style.display = 'block';
+    }
+}
 
 // ========== ДОБАВИТЬ В КОНЕЦ ФАЙЛА ==========
 
