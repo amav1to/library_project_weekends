@@ -2,13 +2,32 @@ from flask import Flask, render_template, request, jsonify, redirect, url_for
 from config import Config
 from models import db, Group, Book, Student, BookRequest
 from datetime import datetime, timedelta
+from functools import wraps
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session, flash
+from datetime import datetime, timedelta
+
+# Простой пароль для библиотекаря (позже можно сделать базу пользователей)
+ADMIN_PASSWORD = "library123"
+
+def admin_required(f):
+    """Декоратор для проверки пароля админа"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # Проверяем пароль из сессии или формы
+        if not session.get('admin_logged_in'):
+            return redirect(url_for('admin_login'))
+        return f(*args, **kwargs)
+    return decorated_function
 
 # Создаем приложение Flask
 app = Flask(__name__)
 app.config.from_object(Config)
+app.secret_key = 'ваш-секретный-ключ-для-сессий-12345'  # Любая строка
 
 # Инициализируем базу данных с приложением
 db.init_app(app)
+
+ADMIN_PASSWORD = "library123"
 
 # Создаем все таблицы в базе данных (если их еще нет)
 with app.app_context():
@@ -172,6 +191,127 @@ def find_student_by_name():
         })
     else:
         return jsonify({'error': 'Студент не найден'}), 404
+    
+# Добавляем секретный ключ для сессий в Config (config.py)
+# Или прямо в app.py:
+app.secret_key = 'ваш-секретный-ключ-для-сессий'
+
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    """Страница входа для библиотекаря"""
+    if request.method == 'POST':
+        password = request.form.get('password', '')
+        
+        # Простая проверка пароля
+        if password == ADMIN_PASSWORD:
+            session['admin_logged_in'] = True
+            return redirect(url_for('admin_dashboard'))
+        else:
+            flash('Неверный пароль')
+            return redirect(url_for('admin_login'))
+    
+    return render_template('admin_login.html')
+
+@app.route('/admin/logout')
+def admin_logout():
+    """Выход из админки"""
+    session.pop('admin_logged_in', None)
+    return redirect(url_for('index'))
+
+@app.route('/admin')
+@admin_required
+def admin_dashboard():
+    """Главная страница админ-панели"""
+    # Получаем все запросы из БД
+    requests = BookRequest.query.order_by(BookRequest.request_date.desc()).all()
+    
+    # Передаем данные в шаблон
+    return render_template('admin.html', requests=requests)
+
+@app.route('/admin/confirm-issue/<int:request_id>', methods=['POST'])
+@admin_required
+def confirm_issue(request_id):
+    """Подтвердить выдачу книги"""
+    try:
+        book_request = BookRequest.query.get_or_404(request_id)
+        
+        # Проверяем, что статус "ожидание"
+        if book_request.status != 'ожидание':
+            return jsonify({'success': False, 'error': 'Запрос уже обработан'}), 400
+        
+        # Проверяем, что книга еще доступна
+        book = Book.query.get(book_request.book_id)
+        if not book:
+            return jsonify({'success': False, 'error': 'Книга не найдена'}), 404
+            
+        if book_request.quantity > book.available_quantity:
+            return jsonify({'success': False, 'error': f'Недостаточно книг. Доступно: {book.available_quantity}'}), 400
+        
+        # Обновляем статус и дату выдачи
+        book_request.status = 'выдано'
+        book_request.issue_date = datetime.now()
+        book_request.planned_return_date = datetime.now() + timedelta(minutes=90)
+        
+        # Уменьшаем количество доступных книг
+        book.available_quantity -= book_request.quantity
+        
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Выдача подтверждена'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/admin/mark-returned/<int:request_id>', methods=['POST'])
+@admin_required
+def mark_returned(request_id):
+    """Отметить книгу как возвращенную"""
+    try:
+        book_request = BookRequest.query.get_or_404(request_id)
+        
+        # Проверяем, что статус "выдано"
+        if book_request.status != 'выдано':
+            return jsonify({'success': False, 'error': 'Книга не была выдана'}), 400
+        
+        # Обновляем статус и дату возврата
+        book_request.status = 'возвращено'
+        book_request.actual_return_date = datetime.now()
+        
+        # Возвращаем книги в доступные
+        book = Book.query.get(book_request.book_id)
+        if book:
+            book.available_quantity += book_request.quantity
+        
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Книга отмечена как возвращенная'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/admin/reject-request/<int:request_id>', methods=['POST'])
+@admin_required
+def reject_request(request_id):
+    """Отклонить запрос"""
+    try:
+        book_request = BookRequest.query.get_or_404(request_id)
+        
+        # Проверяем, что статус "ожидание"
+        if book_request.status != 'ожидание':
+            return jsonify({'success': False, 'error': 'Запрос уже обработан'}), 400
+        
+        # Удаляем запрос (или можно изменить статус на "отклонено")
+        db.session.delete(book_request)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Запрос отклонен'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 # Запуск приложения
 if __name__ == '__main__':
     app.run(debug=True)

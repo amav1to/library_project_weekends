@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Админ-панель библиотеки</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <style>
+        .status-badge {
+            font-size: 0.8em;
+            padding: 0.3em 0.6em;
+        }
+        .status-waiting { background-color: #ffc107; color: #000; }
+        .status-issued { background-color: #0d6efd; color: #fff; }
+        .status-returned { background-color: #198754; color: #fff; }
+        
+        .table-hover tbody tr:hover {
+            background-color: rgba(0, 0, 0, 0.075);
+        }
+        
+        .action-btn {
+            width: 40px;
+            height: 40px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin: 2px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container">
+            <span class="navbar-brand">
+                <i class="bi bi-journal-bookmark"></i> Админ-панель библиотеки
+            </span>
+            <div>
+                <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-light btn-sm me-2">
+                    <i class="bi bi-house"></i> Главная
+                </a>
+                <a href="{{ url_for('admin_logout') }}" class="btn btn-outline-light btn-sm">
+                    <i class="bi bi-box-arrow-right"></i> Выйти
+                </a>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="container mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>📋 Запросы на выдачу книг</h2>
+            <div class="btn-group">
+                <button class="btn btn-outline-primary btn-sm" data-filter="all">Все</button>
+                <button class="btn btn-outline-warning btn-sm" data-filter="waiting">Ожидание</button>
+                <button class="btn btn-outline-info btn-sm" data-filter="issued">Выдано</button>
+                <button class="btn btn-outline-success btn-sm" data-filter="returned">Возвращено</button>
+            </div>
+        </div>
+        
+        {% if requests %}
+        <div class="table-responsive">
+            <table class="table table-hover" id="requestsTable">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Студент</th>
+                        <th>Группа</th>
+                        <th>Книга</th>
+                        <th>Кол-во</th>
+                        <th>Дата запроса</th>
+                        <th>Статус</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for req in requests %}
+                    <tr data-status="{{ req.status }}">
+                        <td>{{ req.id }}</td>
+                        <td>{{ req.student.full_name if req.student else 'Неизвестно' }}</td>
+                        <td>
+                            {% if req.student and req.student.group %}
+                                {{ req.student.group.name }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if req.book %}
+                                {{ req.book.name }} ({{ req.book.language }})
+                            {% else %}
+                                Книга удалена
+                            {% endif %}
+                        </td>
+                        <td>{{ req.quantity }}</td>
+                        <td>{{ req.request_date.strftime('%d.%m.%Y %H:%M') if req.request_date else '-' }}</td>
+                        <td>
+                            {% if req.status == 'ожидание' %}
+                                <span class="badge status-badge status-waiting">
+                                    <i class="bi bi-clock"></i> Ожидание
+                                </span>
+                            {% elif req.status == 'выдано' %}
+                                <span class="badge status-badge status-issued">
+                                    <i class="bi bi-check-circle"></i> Выдано
+                                </span>
+                            {% elif req.status == 'возвращено' %}
+                                <span class="badge status-badge status-returned">
+                                    <i class="bi bi-arrow-return-left"></i> Возвращено
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if req.status == 'ожидание' %}
+                                <button class="btn btn-success btn-sm action-btn" 
+                                    data-action="confirm" 
+                                    data-id="{{ req.id }}"
+                                    title="Подтвердить выдачу">
+                                    <i class="bi bi-check-lg"></i>
+                                </button>
+                                <button class="btn btn-danger btn-sm action-btn"
+                                    data-action="reject" 
+                                    data-id="{{ req.id }}"
+                                    title="Отклонить запрос">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            {% elif req.status == 'выдано' %}
+                                <button class="btn btn-primary btn-sm action-btn"
+                                    data-action="return" 
+                                    data-id="{{ req.id }}"
+                                    title="Отметить возврат">
+                                    <i class="bi bi-arrow-return-left"></i>
+                                </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> Запросов на выдачу книг пока нет.
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Модальное окно для подтверждения -->
+    <div class="modal fade" id="confirmModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Подтверждение</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="modalBody">
+                    <!-- Сюда будет вставляться текст -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="button" class="btn btn-primary" id="modalConfirmBtn">Подтвердить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        console.log('=== АДМИН-ПАНЕЛЬ ЗАГРУЖЕНА ===');
+        
+        // Модальное окно Bootstrap
+        const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
+        const modalBody = document.getElementById('modalBody');
+        const modalConfirmBtn = document.getElementById('modalConfirmBtn');
+        
+        let currentRequestId = null;
+        let currentAction = '';
+        
+        // 1. Обработчик кликов по кнопкам действий
+        document.addEventListener('click', function(event) {
+            let button = event.target;
+            
+            // Если кликнули по иконке внутри кнопки
+            if (button.tagName === 'I') {
+                button = button.closest('button');
+            }
+            
+            // Проверяем кнопки действий
+            if (button && button.hasAttribute('data-action')) {
+                currentAction = button.getAttribute('data-action');
+                currentRequestId = button.getAttribute('data-id');
+                
+                console.log('Обрабатываем кнопку:', currentAction, 'ID:', currentRequestId);
+                
+                // Показываем модальное окно с вопросом
+                if (currentAction === 'confirm') {
+                    modalBody.textContent = 'Подтвердить выдачу книги?';
+                    modalConfirmBtn.textContent = 'Подтвердить выдачу';
+                    confirmModal.show();
+                } 
+                else if (currentAction === 'return') {
+                    modalBody.textContent = 'Отметить книгу как возвращенную?';
+                    modalConfirmBtn.textContent = 'Отметить возврат';
+                    confirmModal.show();
+                }
+                else if (currentAction === 'reject') {
+                    modalBody.textContent = 'Отклонить запрос на выдачу?';
+                    modalConfirmBtn.textContent = 'Отклонить';
+                    confirmModal.show();
+                }
+                
+                return;
+            }
+            
+            // Проверяем кнопки фильтров
+            if (button && button.hasAttribute('data-filter')) {
+                const filter = button.getAttribute('data-filter');
+                filterRequests(filter);
+                return;
+            }
+        });
+        
+        // 2. Обработчик подтверждения в модальном окне
+        modalConfirmBtn.addEventListener('click', function() {
+            if (!currentRequestId || !currentAction) return;
+            
+            console.log('Отправляем запрос:', currentAction, 'ID:', currentRequestId);
+            
+            // Определяем URL для запроса
+            let url = '';
+            if (currentAction === 'confirm') {
+                url = '/admin/confirm-issue/' + currentRequestId;
+            } else if (currentAction === 'return') {
+                url = '/admin/mark-returned/' + currentRequestId;
+            } else if (currentAction === 'reject') {
+                url = '/admin/reject-request/' + currentRequestId;
+            }
+            
+            // Отправляем запрос на сервер
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                console.log('Ответ сервера:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('Данные ответа:', data);
+                
+                if (data.success) {
+                    // Успешно - перезагружаем страницу
+                    console.log('Успех! Перезагружаем страницу...');
+                    location.reload();
+                } else {
+                    // Ошибка - показываем сообщение
+                    console.error('Ошибка сервера:', data.error);
+                    alert('Ошибка: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка сети:', error);
+                alert('Ошибка сети: ' + error.message);
+            })
+            .finally(() => {
+                // Закрываем модальное окно
+                confirmModal.hide();
+            });
+        });
+        
+        // 3. Функция фильтрации
+        function filterRequests(filter) {
+            console.log('Применяем фильтр:', filter);
+            
+            const rows = document.querySelectorAll('#requestsTable tbody tr');
+            const statusMap = {
+                'all': 'all',
+                'waiting': 'ожидание',
+                'issued': 'выдано',
+                'returned': 'возвращено'
+            };
+            
+            const targetStatus = statusMap[filter] || filter;
+            
+            rows.forEach(row => {
+                if (filter === 'all' || row.getAttribute('data-status') === targetStatus) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+        
+        // 4. Проверяем элементы при загрузке
+        window.addEventListener('load', function() {
+            console.log('Элементы страницы:');
+            console.log('- Модальное окно:', document.getElementById('confirmModal') ? 'найдено' : 'не найдено');
+            console.log('- Кнопки действий:', document.querySelectorAll('[data-action]').length + ' шт.');
+            console.log('- Строки в таблице:', document.querySelectorAll('#requestsTable tbody tr').length + ' шт.');
+        });
+    </script>
+</body>
+</html>
