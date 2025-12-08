@@ -83,7 +83,7 @@
         <div class="status-card">
             <!-- Заголовок с номером -->
             <div class="text-center mb-4">
-                <h3>Запрос #{{ book_request.id }}</h3>
+                <h3>Запрос №{% if book_request.request_number %}{{ book_request.request_number.split('-')[1] | int }}{% else %}{{ book_request.id }}{% endif %}</h3>
                 <p class="text-muted">Детали вашего запроса на книгу</p>
             </div>
             
@@ -119,6 +119,10 @@
                 </div>
                 <div class="card-body">
                     <table class="table">
+                        <tr>
+                            <th>Номер запроса:</th>
+                            <td>№{% if book_request.request_number %}{{ book_request.request_number.split('-')[1] | int }}{% else %}{{ book_request.id }}{% endif %}</td>
+                        </tr>
                         <tr>
                             <th width="40%">Студент:</th>
                             <td>{{ book_request.student.full_name if book_request.student else 'Неизвестно' }}</td>

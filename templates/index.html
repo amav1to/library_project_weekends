@@ -131,7 +131,7 @@
                                 <div class="mb-3">
                                     <i class="bi bi-journal-check display-1 text-success"></i>
                                 </div>
-                                <h4 class="mb-3">Запрос <span id="requestId" class="text-primary">#</span> отправлен</h4>
+                                <h4 class="mb-3">Запрос №<span id="requestId" class="text-primary"></span> отправлен</h4>
                                 <p class="lead">Ожидайте подтверждения библиотекаря</p>
                                 
                                 <div class="alert alert-info">
@@ -184,22 +184,18 @@
             <script>
                 document.getElementById('checkStatusBtn').addEventListener('click', function() {
                     const requestIdElement = document.getElementById('requestId');
-                    if (requestIdElement && requestIdElement.textContent) {
-                        // Получаем номер вида "#071225-001"
-                        const fullText = requestIdElement.textContent;
-                        console.log('Текст номера:', fullText);
-                        
-                        // Извлекаем чистый номер
-                        let requestId = fullText;
-                        if (fullText.startsWith('#')) {
-                            requestId = fullText.substring(1); // Убираем #
-                        }
-                        
-                        console.log('Чистый номер:', requestId);
-                        window.location.href = '/check-status?request_id=' + encodeURIComponent(requestId);
+                    if (requestIdElement && requestIdElement.dataset.fullNumber) {
+                        // Используем полный номер из data-атрибута
+                        const fullNumber = requestIdElement.dataset.fullNumber;
+                        console.log('Используем полный номер:', fullNumber);
+                        window.location.href = '/check-status?request_id=' + encodeURIComponent(fullNumber);
+                    } else if (requestIdElement && requestIdElement.textContent) {
+                        // Резервный вариант
+                        const shortNumber = requestIdElement.textContent;
+                        console.log('Используем короткий номер:', shortNumber);
+                        window.location.href = '/check-status?request_id=' + encodeURIComponent(shortNumber);
                     } else {
-                        // Если нет номера - показываем первый запрос
-                        window.location.href = '/check-status?request_id=071225-001';
+                        window.location.href = '/check-status';
                     }
                 });
             </script>

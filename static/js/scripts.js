@@ -374,16 +374,18 @@ function showSuccessModal(message) {
     console.log('Показываем успех:', message);
     
     // Ищем номер в сообщении (формат: 071225-001)
-    const match = message.match(/(\d{6}-\d{3})/); // Ищем ДДММГГ-XXX
+    const match = message.match(/(\d{6})-(\d{3})/); // Ищем ДДММГГ-XXX
     
     if (match) {
-        const requestId = match[1]; // 071225-001
-        console.log('Найден номер запроса:', requestId);
+        const fullNumber = match[1] + '-' + match[2]; // 071225-001
+        const shortNumber = parseInt(match[2]); // 001 → 1
+        console.log('Полный номер:', fullNumber, 'Короткий:', shortNumber);
         
-        // Заполняем номер в модальном окне
+        // Заполняем номер в модальном окне (показываем только короткий)
         const requestIdElement = document.getElementById('requestId');
         if (requestIdElement) {
-            requestIdElement.textContent = '#' + requestId; // → #071225-001
+            requestIdElement.textContent = shortNumber; // Просто 1
+            requestIdElement.dataset.fullNumber = fullNumber; // Сохраняем полный номер в data-атрибут
         }
         
         // Показываем модальное окно
@@ -391,15 +393,11 @@ function showSuccessModal(message) {
         if (successModalElement) {
             const successModal = new bootstrap.Modal(successModalElement);
             successModal.show();
-        } else {
-            alert('Запрос отправлен! Номер: ' + requestId);
         }
     } else {
-        console.log('Номер не найден в сообщении:', message);
         alert(message);
     }
 }
-
 // ========== ДОБАВИТЬ В КОНЕЦ ФАЙЛА ==========
 
 // Кнопка очистки студента
