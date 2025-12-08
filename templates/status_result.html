@@ -3,114 +3,260 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Статус запроса #{{ book_request.id }}</title>
+    <title>Статус запроса #{{ book_request.id }} - Библиотека KIT</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
     <style>
+        :root {
+            --kit-orange: #ff6b00;
+            --kit-green: #4CAF50;
+            --kit-white: #ffffff;
+        }
+        
         body {
-            background-color: #f8f9fa;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
+        
+        .kit-header {
+            background: linear-gradient(90deg, var(--kit-orange) 0%, #ff8c00 100%);
+            padding: 1rem 0;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 12px rgba(255, 107, 0, 0.15);
+        }
+        
+        .kit-logo {
+            font-size: 2rem;
+            font-weight: 700;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .kit-logo span {
+            color: var(--kit-green);
+        }
+        
         .status-card {
-            max-width: 600px;
-            margin: 50px auto;
-            padding: 2rem;
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 2.5rem;
             background: white;
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            border-top: 5px solid var(--kit-orange);
+            animation: fadeIn 0.6s ease-out;
         }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
         .status-icon {
-            font-size: 5rem;
-            margin-bottom: 1rem;
+            font-size: 4rem;
+            margin-bottom: 1.5rem;
         }
+        
         .status-badge {
-            font-size: 1.2em;
-            padding: 0.5em 1em;
+            font-size: 1.1rem;
+            padding: 0.6em 1.2em;
+            border-radius: 25px;
+            font-weight: 600;
         }
+        
         .status-waiting { 
-            background-color: #fff3cd; 
+            background: linear-gradient(90deg, #ffc107 0%, #ffdb4d 100%);
             color: #856404;
-            border: 1px solid #ffeaa7;
+            border: none;
         }
         .status-issued { 
-            background-color: #d1ecf1; 
-            color: #0c5460;
-            border: 1px solid #bee5eb;
+            background: linear-gradient(90deg, var(--kit-orange) 0%, #ff8c00 100%);
+            color: white;
+            border: none;
         }
         .status-returned { 
-            background-color: #d4edda; 
-            color: #155724;
-            border: 1px solid #c3e6cb;
+            background: linear-gradient(90deg, var(--kit-green) 0%, #5cb85c 100%);
+            color: white;
+            border: none;
         }
+        
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+        
+        .card-header {
+            background: linear-gradient(90deg, rgba(255, 107, 0, 0.1) 0%, rgba(255, 140, 0, 0.1) 100%);
+            border-bottom: 2px solid rgba(255, 107, 0, 0.2);
+            color: var(--kit-orange);
+            font-weight: 600;
+            padding: 1rem 1.5rem;
+        }
+        
+        .table {
+            margin-bottom: 0;
+        }
+        
+        .table th {
+            color: var(--kit-orange);
+            font-weight: 600;
+            border-bottom: 2px solid rgba(255, 107, 0, 0.1);
+            background-color: rgba(255, 107, 0, 0.05);
+        }
+        
+        .table td {
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            padding: 1rem;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(90deg, var(--kit-orange) 0%, #ff8c00 100%);
+            border: none;
+            border-radius: 10px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 0, 0.3);
+        }
+        
+        .btn-outline-primary {
+            border: 2px solid var(--kit-orange);
+            color: var(--kit-orange);
+            border-radius: 10px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .btn-outline-primary:hover {
+            background-color: var(--kit-orange);
+            color: white;
+        }
+        
+        .btn-outline-secondary {
+            border-radius: 10px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+        }
+        
         .timeline {
             position: relative;
             padding-left: 30px;
             margin: 20px 0;
         }
+        
         .timeline::before {
             content: '';
             position: absolute;
             left: 15px;
             top: 0;
             bottom: 0;
-            width: 2px;
-            background-color: #dee2e6;
+            width: 3px;
+            background: linear-gradient(to bottom, var(--kit-orange) 0%, var(--kit-green) 100%);
         }
+        
         .timeline-item {
             position: relative;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
+            padding-left: 15px;
         }
+        
         .timeline-item::before {
             content: '';
             position: absolute;
-            left: -23px;
+            left: -24px;
             top: 5px;
-            width: 12px;
-            height: 12px;
+            width: 14px;
+            height: 14px;
             border-radius: 50%;
-            background-color: #6c757d;
+            background-color: #adb5bd;
+            border: 3px solid white;
+            box-shadow: 0 0 0 2px #adb5bd;
         }
+        
         .timeline-item.active::before {
-            background-color: #0d6efd;
-            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.2);
+            background-color: var(--kit-orange);
+            box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.3);
         }
+        
         .timeline-item.completed::before {
-            background-color: #198754;
+            background-color: var(--kit-green);
+            box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.3);
+        }
+        
+        .color-strip {
+            height: 5px;
+            background: linear-gradient(90deg, var(--kit-orange) 0%, var(--kit-green) 100%);
+            border-radius: 5px;
+            margin: 1.5rem 0;
+        }
+        
+        .badge {
+            border-radius: 20px;
+            padding: 0.4em 0.8em;
+            font-weight: 600;
         }
     </style>
 </head>
 <body>
+    <!-- Шапка с логотипом -->
+    <header class="kit-header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-12 text-center">
+                    <div class="kit-logo">
+                        <i class="bi bi-journal-bookmark-fill"></i>
+                        Библиотека <span>KIT</span> колледжа
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+    
     <div class="container">
         <div class="status-card">
             <!-- Заголовок с номером -->
             <div class="text-center mb-4">
-                <h3>Запрос №{% if book_request.request_number %}{{ book_request.request_number.split('-')[1] | int }}{% else %}{{ book_request.id }}{% endif %}</h3>
+                <h3 style="color: var(--kit-orange);">
+                    <i class="bi bi-journal-text"></i> Запрос №{% if book_request.request_number %}{{ book_request.request_number.split('-')[1] | int }}{% else %}{{ book_request.id }}{% endif %}
+                </h3>
                 <p class="text-muted">Детали вашего запроса на книгу</p>
             </div>
             
             <!-- Статус -->
-            <div class="text-center mb-4">
+            <div class="text-center mb-5">
                 {% if book_request.status == 'ожидание' %}
-                    <div class="status-icon status-waiting">
+                    <div class="status-icon" style="color: #ffc107;">
                         <i class="bi bi-clock-history"></i>
                     </div>
                     <h4><span class="badge status-badge status-waiting">Ожидание подтверждения</span></h4>
                     <p class="text-muted">Ваш запрос ожидает обработки библиотекарем</p>
                     
                 {% elif book_request.status == 'выдано' %}
-                    <div class="status-icon status-issued">
+                    <div class="status-icon" style="color: var(--kit-orange);">
                         <i class="bi bi-check-circle"></i>
                     </div>
                     <h4><span class="badge status-badge status-issued">Книга выдана</span></h4>
                     <p class="text-muted">Книга выдана, можете забирать</p>
                     
                 {% elif book_request.status == 'возвращено' %}
-                    <div class="status-icon status-returned">
+                    <div class="status-icon" style="color: var(--kit-green);">
                         <i class="bi bi-arrow-return-left"></i>
                     </div>
                     <h4><span class="badge status-badge status-returned">Книга возвращена</span></h4>
                     <p class="text-muted">Книга успешно возвращена в библиотеку</p>
                 {% endif %}
             </div>
+            
+            <div class="color-strip"></div>
             
             <!-- Детали -->
             <div class="card mb-4">
@@ -120,36 +266,41 @@
                 <div class="card-body">
                     <table class="table">
                         <tr>
-                            <th>Номер запроса:</th>
-                            <td>№{% if book_request.request_number %}{{ book_request.request_number.split('-')[1] | int }}{% else %}{{ book_request.id }}{% endif %}</td>
+                            <th width="35%"><i class="bi bi-hash"></i> Номер запроса:</th>
+                            <td><strong>№{% if book_request.request_number %}{{ book_request.request_number.split('-')[1] | int }}{% else %}{{ book_request.id }}{% endif %}</strong></td>
                         </tr>
                         <tr>
-                            <th width="40%">Студент:</th>
+                            <th><i class="bi bi-person"></i> Студент:</th>
                             <td>{{ book_request.student.full_name if book_request.student else 'Неизвестно' }}</td>
                         </tr>
                         <tr>
-                            <th>Группа:</th>
+                            <th><i class="bi bi-people"></i> Группа:</th>
                             <td>
                                 {% if book_request.student and book_request.student.group %}
-                                    {{ book_request.student.group.name }}
+                                    <span class="badge bg-secondary">
+                                        <i class="bi bi-mortarboard"></i> {{ book_request.student.group.name }}
+                                    </span>
                                 {% else %}
                                     -
                                 {% endif %}
                             </td>
                         </tr>
                         <tr>
-                            <th>Книга:</th>
+                            <th><i class="bi bi-book"></i> Книга:</th>
                             <td>
                                 {% if book_request.book %}
-                                    {{ book_request.book.name }} ({{ book_request.book.author }})
+                                    <strong>{{ book_request.book.name }}</strong><br>
+                                    <small class="text-muted">{{ book_request.book.author }}</small>
                                 {% else %}
-                                    Книга удалена
+                                    <span class="text-danger">Книга удалена</span>
                                 {% endif %}
                             </td>
                         </tr>
                         <tr>
-                            <th>Количество:</th>
-                            <td>{{ book_request.quantity }} экз.</td>
+                            <th><i class="bi bi-123"></i> Количество:</th>
+                            <td>
+                                <span class="badge bg-primary">{{ book_request.quantity }}</span> экз.
+                            </td>
                         </tr>
                     </table>
                 </div>
@@ -179,6 +330,7 @@
                             </div>
                             {% if book_request.planned_return_date %}
                             <div class="text-muted small">
+                                <i class="bi bi-calendar-check" style="color: var(--kit-green);"></i>
                                 Вернуть до: {{ book_request.planned_return_date.strftime('%d.%m.%Y %H:%M') }}
                             </div>
                             {% endif %}
@@ -198,22 +350,25 @@
                 </div>
             </div>
             
+            <div class="color-strip"></div>
+            
             <!-- Кнопки -->
             <div class="mt-4 text-center">
                 <a href="{{ url_for('check_status') }}" class="btn btn-outline-primary me-2">
                     <i class="bi bi-search"></i> Проверить другой запрос
                 </a>
-                <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                <a href="{{ url_for('index') }}" class="btn btn-primary">
                     <i class="bi bi-house"></i> На главную
                 </a>
             </div>
             
             <!-- Автообновление (для ожидающих) -->
             {% if book_request.status == 'ожидание' %}
-            <div class="mt-3 text-center">
-                <small class="text-muted">
-                    <i class="bi bi-arrow-clockwise"></i> Страница обновится автоматически при изменении статуса
-                </small>
+            <div class="mt-4 text-center">
+                <div class="alert alert-info" style="background: rgba(255, 107, 0, 0.1); border-color: var(--kit-orange);">
+                    <i class="bi bi-arrow-clockwise" style="color: var(--kit-orange);"></i>
+                    <strong>Страница обновится автоматически при изменении статуса</strong>
+                </div>
             </div>
             <script>
                 // Автообновление каждые 30 секунд для ожидающих запросов

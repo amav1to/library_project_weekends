@@ -6,206 +6,470 @@
     <title>Библиотека - Взять книгу</title>
     <!-- Подключаем Bootstrap для красивого вида -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    
     <style>
-        #student-suggestions {
-            position: absolute;
-            z-index: 1000;
-            width: 100%;
-            max-height: 200px;
-            overflow-y: auto;
+        :root {
+            --kit-orange: #ff6b00;
+            --kit-green: #4CAF50;
+            --kit-white: #ffffff;
+            --kit-gray: #f8f9fa;
         }
-        .list-group-item {
-            cursor: pointer;
+        
+        body {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        .list-group-item:hover {
-            background-color: #f8f9fa;
+        
+        .kit-header {
+            background: linear-gradient(90deg, var(--kit-orange) 0%, #ff8c00 100%);
+            padding: 1rem 0;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 12px rgba(255, 107, 0, 0.15);
         }
-
+        
+        .kit-logo {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .kit-logo span {
+            color: var(--kit-green);
+        }
+        
+        .main-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .welcome-card {
+            background: white;
+            border-radius: 15px;
+            padding: 2.5rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            border: none;
+            margin-bottom: 2rem;
+            text-align: center;
+            border-top: 5px solid var(--kit-orange);
+        }
+        
+        .welcome-title {
+            color: var(--kit-orange);
+            font-weight: 700;
+            margin-bottom: 1rem;
+            font-size: 2rem;
+        }
+        
+        .welcome-subtitle {
+            color: #666;
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto 2rem;
+        }
+        
+        .form-container {
+            background: white;
+            border-radius: 15px;
+            padding: 2.5rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            border: none;
+            border-top: 5px solid var(--kit-green);
+        }
+        
+        .form-label {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .form-label i {
+            color: var(--kit-orange);
+            font-size: 1.2rem;
+        }
+        
+        .input-group {
+            position: relative;
+        }
+        
+        .form-control, .form-select {
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+        
+        .form-control:focus, .form-select:focus {
+            border-color: var(--kit-orange);
+            box-shadow: 0 0 0 0.25rem rgba(255, 107, 0, 0.25);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(90deg, var(--kit-orange) 0%, #ff8c00 100%);
+            border: none;
+            border-radius: 10px;
+            padding: 0.75rem 2rem;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: all 0.3s;
+            margin-top: 1rem;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 0, 0.3);
+        }
+        
+        .status-check-card {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            border: none;
+            border-left: 5px solid var(--kit-green);
+            margin-top: 2rem;
+        }
+        
+        /* Стили для подсказок студентов */
         #student-suggestions {
             position: absolute;
             z-index: 1000;
             width: 100%;
             max-height: 300px;
             overflow-y: auto;
-            border: 1px solid #dee2e6;
-            border-radius: 0.375rem;
+            border: 2px solid var(--kit-orange);
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            background: white;
+            margin-top: 0.25rem;
         }
-        #student-suggestions .list-group-item-light {
-            font-weight: bold;
-            font-size: 0.9em;
-            padding: 0.5rem 1rem;
-        }
-        #student-suggestions .list-group-item-action {
-            padding: 0.5rem 1rem;
+        
+        #student-suggestions .list-group-item {
             border: none;
-            border-top: 1px solid rgba(0,0,0,.125);
-            text-align: left;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #f0f0f0;
         }
-        #student-suggestions .list-group-item-action:hover {
-            background-color: #0d6efd;
+        
+        #student-suggestions .list-group-item:hover {
+            background-color: rgba(255, 107, 0, 0.1);
+            color: var(--kit-orange);
+        }
+        
+        .form-icon {
+            color: var(--kit-orange);
+            font-size: 1.5rem;
+            margin-right: 0.5rem;
+        }
+        
+        .group-badge {
+            background: linear-gradient(90deg, var(--kit-orange) 0%, #ff8c00 100%);
+            color: white;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+        
+        .quantity-controls {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            max-width: 200px;
+        }
+        
+        .quantity-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            border: 2px solid var(--kit-orange);
+            background: white;
+            color: var(--kit-orange);
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .quantity-btn:hover {
+            background: var(--kit-orange);
             color: white;
         }
+        
+        /* Анимации */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .welcome-card, .form-container {
+            animation: fadeIn 0.6s ease-out;
+        }
+        
+        /* Декоративные элементы */
+        .kit-decoration {
+            position: fixed;
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, rgba(255, 107, 0, 0.05) 0%, rgba(76, 175, 80, 0.05) 100%);
+            z-index: -1;
+        }
+        
+        .decoration-1 {
+            top: 10%;
+            right: 10%;
+        }
+        
+        .decoration-2 {
+            bottom: 10%;
+            left: 10%;
+        }
+        
+        /* Цветные полосы */
+        .color-strip {
+            height: 5px;
+            background: linear-gradient(90deg, var(--kit-orange) 0%, var(--kit-green) 100%);
+            border-radius: 5px;
+            margin: 1rem 0;
+        }
     </style>
-
 </head>
 <body>
-    <div class="container mt-5">
-        <h1 class="mb-4">📚 Заявка на получение книги</h1>
-        
-        <form method="POST" action="/request-book">
-            <!-- Выбор группы -->
-            <div class="mb-3">
-                <label for="group" class="form-label">Ваша группа:</label>
-                <select class="form-select" id="group" name="group_id" required>
-                    <option value="">-- Выберите группу --</option>
-                    <!-- Сюда будут добавляться группы через Python -->
-                </select>
+    <!-- Декоративные элементы -->
+    <div class="kit-decoration decoration-1"></div>
+    <div class="kit-decoration decoration-2"></div>
+    
+    <!-- Шапка с логотипом -->
+    <header class="kit-header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-12 text-center">
+                    <div class="kit-logo">
+                        <i class="bi bi-journal-bookmark-fill"></i>
+                        Библиотека <span>KIT</span> колледжа
+                    </div>
+                </div>
             </div>
+        </div>
+    </header>
+    
+    <div class="main-container">
+        <!-- Приветственная карточка -->
+        <div class="welcome-card">
+            <h1 class="welcome-title">
+                <i class="bi bi-journal-text"></i> Автоматизированная система выдачи книг
+            </h1>
+            <p class="welcome-subtitle">
+                Удобный и современный способ получения учебной литературы для студентов колледжа KIT
+            </p>
+            <div class="color-strip"></div>
+            <p class="text-muted">
+                <i class="bi bi-info-circle" style="color: var(--kit-orange);"></i>
+                Выберите группу, найдите себя в списке и закажите нужные книги
+            </p>
+        </div>
+        
+        <!-- Форма для заявки -->
+        <div class="form-container">
+            <h3 class="mb-4" style="color: var(--kit-orange);">
+                <i class="bi bi-journal-plus"></i> Заявка на получение книги
+            </h3>
+            
+            <form method="POST" action="/request-book" id="bookRequestForm">
+                <!-- Выбор группы -->
+                <div class="mb-4">
+                    <label for="group" class="form-label">
+                        <i class="bi bi-people-fill"></i> Ваша группа:
+                    </label>
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <span class="group-badge">
+                            <i class="bi bi-mortarboard-fill"></i> Студенты
+                        </span>
+                        <small class="text-muted">Выберите свою учебную группу</small>
+                    </div>
+                    <select class="form-select" id="group" name="group_id" required>
+                        <option value="">-- Выберите группу из списка --</option>
+                        <!-- Сюда будут добавляться группы через Python -->
+                    </select>
+                    <input type="hidden" id="current_group_id" name="current_group_id">
+                </div>
 
-            <input type="hidden" id="current_group_id" name="current_group_id">
-
-            <!-- Поиск студента -->
-            <div class="mb-3">
-                <label for="student" class="form-label">ФИО студента:</label>
-                <div class="input-group">
-                    <input type="text" class="form-control" id="student" 
-                        placeholder="Начните вводить ФИО..." 
-                        autocomplete="off">
-                    <button class="btn btn-outline-secondary" type="button" id="clear-student">
-                        ✕
+                <!-- Поиск студента -->
+                <div class="mb-4">
+                    <label for="student" class="form-label">
+                        <i class="bi bi-person-badge"></i> ФИО студента:
+                    </label>
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <span class="group-badge">
+                            <i class="bi bi-search"></i> Поиск
+                        </span>
+                        <small class="text-muted">Начните вводить свою фамилию</small>
+                    </div>
+                    <div class="input-group">
+                        <span class="input-group-text" style="background: rgba(255, 107, 0, 0.1); border-color: #e0e0e0;">
+                            <i class="bi bi-person" style="color: var(--kit-orange);"></i>
+                        </span>
+                        <input type="text" class="form-control" id="student" 
+                            placeholder="Например: Иванов Иван" 
+                            autocomplete="off">
+                        <button class="btn btn-outline-secondary" type="button" id="clear-student" style="border-color: #e0e0e0;">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                    <input type="hidden" name="student_id" id="student_id" required>
+                    <div class="form-text text-muted">
+                        <i class="bi bi-lightbulb"></i> Выберите себя из появившегося списка
+                    </div>
+                    
+                    <div id="student-suggestions" class="list-group mt-2" style="display: none;">
+                        <!-- Сюда будут появляться подсказки -->
+                    </div>
+                </div>
+                
+                <!-- Выбор книги -->
+                <div class="mb-4">
+                    <label for="book" class="form-label">
+                        <i class="bi bi-book"></i> Книга:
+                    </label>
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <span class="group-badge">
+                            <i class="bi bi-list-check"></i> Каталог
+                        </span>
+                        <small class="text-muted">Доступные книги для вашей группы</small>
+                    </div>
+                    <select class="form-select" id="book" name="book_id" required>
+                        <option value="">-- Сначала выберите группу --</option>
+                        <!-- Книги будут подгружаться в зависимости от группы -->
+                    </select>
+                </div>
+                
+                <!-- Количество -->
+                <div class="mb-4">
+                    <label for="quantity" class="form-label">
+                        <i class="bi bi-123"></i> Количество экземпляров:
+                    </label>
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <span class="group-badge">
+                            <i class="bi bi-stack"></i> Экземпляры
+                        </span>
+                        <small class="text-muted">Сколько книг вам нужно</small>
+                    </div>
+                    <div class="quantity-controls">
+                        <button type="button" class="quantity-btn" id="decrease-qty">-</button>
+                        <input type="number" class="form-control text-center" id="quantity" name="quantity" 
+                            min="1" value="1" required style="max-width: 100px;">
+                        <button type="button" class="quantity-btn" id="increase-qty">+</button>
+                    </div>
+                    <div class="form-text text-muted">
+                        <i class="bi bi-info-circle"></i> Используйте кнопки или введите число
+                    </div>
+                </div>
+                
+                <div class="color-strip"></div>
+                
+                <!-- Кнопка отправки -->
+                <div class="text-center">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="bi bi-send-check"></i> Отправить запрос
                     </button>
                 </div>
-                <!-- Скрытое поле для ID студента (ОБЯЗАТЕЛЬНОЕ) -->
-                <input type="hidden" name="student_id" id="student_id" required>
-                <div class="form-text">Выберите студента из списка</div>
-                
-                <div id="student-suggestions" class="list-group mt-2" style="display: none;">
-                    <!-- Сюда будут появляться подсказки -->
+            </form>
+        </div>
+        
+        <!-- Проверка статуса -->
+        <div class="status-check-card">
+            <div class="row align-items-center">
+                <div class="col-md-9">
+                    <h5 class="mb-1" style="color: var(--kit-green);">
+                        <i class="bi bi-hourglass-split"></i> Уже отправили запрос?
+                    </h5>
+                    <p class="mb-0 text-muted">Проверьте статус вашей заявки на выдачу книги</p>
+                </div>
+                <div class="col-md-3 text-end">
+                    <a href="/check-status" class="btn btn-outline-success" style="border-color: var(--kit-green); color: var(--kit-green);">
+                        <i class="bi bi-search"></i> Проверить статус
+                    </a>
                 </div>
             </div>
-            
-            <!-- Выбор книги -->
-            <div class="mb-3">
-                <label for="book" class="form-label">Книга:</label>
-                <select class="form-select" id="book" name="book_id" required>
-                    <option value="">-- Сначала выберите группу --</option>
-                    <!-- Книги будут подгружаться в зависимости от группы -->
-                </select>
-            </div>
-            
-            <!-- Количество -->
-            <div class="mb-3">
-                <label for="quantity" class="form-label">Количество экземпляров:</label>
-                <input type="number" class="form-control" id="quantity" name="quantity" 
-                    min="1" value="1" required style="max-width: 200px;">
-                <div class="form-text">Введите количество или используйте кнопки</div>
-            </div>
-            
-            <button type="submit" class="btn btn-primary">Отправить запрос</button>
-        </form>
-        <!DOCTYPE html>
-        <html lang="ru">
-        <head>
-            <!-- ... head content ... -->
-        </head>
-        <body>
-            <div class="container mt-5">
-                <h1 class="mb-4">📚 Заявка на получение книги</h1>
-                
-                <form method="POST" action="/request-book">
-                    <!-- ... вся форма ... -->
-                </form>
-                
-                <!-- Модальное окно для успешной отправки -->
-                <div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true">
-                    <div class="modal-dialog modal-dialog-centered">
-                        <div class="modal-content">
-                            <div class="modal-header bg-success text-white">
-                                <h5 class="modal-title">
-                                    <i class="bi bi-check-circle-fill"></i> Успешно!
-                                </h5>
-                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                            </div>
-                            <div class="modal-body text-center">
-                                <div class="mb-3">
-                                    <i class="bi bi-journal-check display-1 text-success"></i>
-                                </div>
-                                <h4 class="mb-3">Запрос №<span id="requestId" class="text-primary"></span> отправлен</h4>
-                                <p class="lead">Ожидайте подтверждения библиотекаря</p>
-                                
-                                <div class="alert alert-info">
-                                    <i class="bi bi-info-circle"></i> 
-                                    <strong>Сохраните номер запроса!</strong><br>
-                                    Он понадобится для проверки статуса
-                                </div>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                                    <i class="bi bi-x-circle"></i> Закрыть
-                                </button>
-                                <button type="button" class="btn btn-primary" id="checkStatusBtn">
-                                    <i class="bi bi-search"></i> Проверить статус
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Обработчик для кнопки "Проверить статус" в модальном окне -->
-                <script>
-                    document.getElementById('checkStatusBtn').addEventListener('click', function() {
-                        // Просто открываем страницу без номера
-                        window.location.href = '/check-status';
-                    });
-                </script>
-
-                <!-- После формы, перед сообщениями об ошибках -->
-                <div class="card mt-4">
-                    <div class="card-body">
-                        <h5 class="card-title"><i class="bi bi-search"></i> Проверить статус запроса</h5>
-                        <p class="card-text">Уже отправили запрос и хотите узнать его статус?</p>
-                        <a href="#" id="checkStatusBtn" class="btn btn-primary">
-                            <i class="bi bi-search"></i> Проверить статус запроса
-                        </a>
-                    </div>
-                </div>
-
-                <!-- === ДОБАВИТЬ ЭТО ЗДЕСЬ === -->
-                <div id="error-message" class="alert alert-danger mt-3" style="display: none;"></div>
-                <div id="success-message" class="alert alert-success mt-3" style="display: none;"></div>
-                <!-- === КОНЕЦ ДОБАВЛЕНИЯ === -->
-                
-            </div> <!-- закрывающий div контейнера -->
-            
-            <!-- ... скрипты ... -->
-
-            <!-- Обработчик для кнопки "Проверить статус" в модальном окне -->
-            <script>
-                document.getElementById('checkStatusBtn').addEventListener('click', function() {
-                    const requestIdElement = document.getElementById('requestId');
-                    if (requestIdElement && requestIdElement.dataset.fullNumber) {
-                        // Используем полный номер из data-атрибута
-                        const fullNumber = requestIdElement.dataset.fullNumber;
-                        console.log('Используем полный номер:', fullNumber);
-                        window.location.href = '/check-status?request_id=' + encodeURIComponent(fullNumber);
-                    } else if (requestIdElement && requestIdElement.textContent) {
-                        // Резервный вариант
-                        const shortNumber = requestIdElement.textContent;
-                        console.log('Используем короткий номер:', shortNumber);
-                        window.location.href = '/check-status?request_id=' + encodeURIComponent(shortNumber);
-                    } else {
-                        window.location.href = '/check-status';
-                    }
-                });
-            </script>
-        </body>
-        </html>
+        </div>
+        
+        <!-- Сообщения об ошибках и успехе -->
+        <div id="error-message" class="alert alert-danger mt-3" style="display: none; border-radius: 10px;"></div>
+        <div id="success-message" class="alert alert-success mt-3" style="display: none; border-radius: 10px;"></div>
     </div>
     
+    <!-- Модальное окно для успешной отправки -->
+    <div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(90deg, var(--kit-green) 0%, #5cb85c 100%); color: white;">
+                    <h5 class="modal-title">
+                        <i class="bi bi-check-circle-fill"></i> Успешно!
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <div class="mb-3">
+                        <i class="bi bi-journal-check display-1" style="color: var(--kit-green);"></i>
+                    </div>
+                    <h4 class="mb-3">Запрос №<span id="requestId" class="text-primary"></span> отправлен</h4>
+                    <p class="lead">Ожидайте подтверждения библиотекаря</p>
+                    
+                    <div class="alert alert-info" style="background: rgba(76, 175, 80, 0.1); border-color: var(--kit-green);">
+                        <i class="bi bi-info-circle" style="color: var(--kit-green);"></i> 
+                        <strong>Сохраните номер запроса!</strong><br>
+                        Он понадобится для проверки статуса
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle"></i> Закрыть
+                    </button>
+                    <button type="button" class="btn btn-primary" id="checkStatusBtn">
+                        <i class="bi bi-search"></i> Проверить статус
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Подключаем Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Наш JavaScript для поиска -->
+    <script>
+        // Управление количеством
+        document.getElementById('increase-qty').addEventListener('click', function() {
+            const input = document.getElementById('quantity');
+            input.value = parseInt(input.value) + 1;
+        });
+        
+        document.getElementById('decrease-qty').addEventListener('click', function() {
+            const input = document.getElementById('quantity');
+            if (parseInt(input.value) > 1) {
+                input.value = parseInt(input.value) - 1;
+            }
+        });
+        
+        // Обработчик для кнопки проверки статуса в модальном окне
+        document.getElementById('checkStatusBtn').addEventListener('click', function() {
+            const requestIdElement = document.getElementById('requestId');
+            if (requestIdElement && requestIdElement.dataset.fullNumber) {
+                const fullNumber = requestIdElement.dataset.fullNumber;
+                window.location.href = '/check-status?request_id=' + encodeURIComponent(fullNumber);
+            } else {
+                window.location.href = '/check-status';
+            }
+        });
+    </script>
     <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
 </body>
 </html>

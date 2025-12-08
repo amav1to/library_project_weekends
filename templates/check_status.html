@@ -3,54 +3,171 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Проверка статуса запроса</title>
+    <title>Проверка статуса запроса - Библиотека KIT</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
     <style>
-        body {
-            background-color: #f8f9fa;
+        :root {
+            --kit-orange: #ff6b00;
+            --kit-green: #4CAF50;
+            --kit-white: #ffffff;
         }
+        
+        body {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .kit-header {
+            background: linear-gradient(90deg, var(--kit-orange) 0%, #ff8c00 100%);
+            padding: 1rem 0;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 12px rgba(255, 107, 0, 0.15);
+        }
+        
+        .kit-logo {
+            font-size: 2rem;
+            font-weight: 700;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .kit-logo span {
+            color: var(--kit-green);
+        }
+        
         .status-container {
             max-width: 500px;
-            margin: 50px auto;
-            padding: 2rem;
+            margin: 0 auto;
+            padding: 2.5rem;
             background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            border-top: 5px solid var(--kit-orange);
+            animation: fadeIn 0.6s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .form-label {
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .form-label i {
+            color: var(--kit-orange);
+            font-size: 1.2rem;
+        }
+        
+        .form-control {
+            border: 2px solid #e0e0e0;
             border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            transition: all 0.3s;
         }
-        .status-icon {
-            font-size: 4rem;
-            margin-bottom: 1rem;
+        
+        .form-control:focus {
+            border-color: var(--kit-orange);
+            box-shadow: 0 0 0 0.25rem rgba(255, 107, 0, 0.25);
         }
-        .status-waiting { color: #ffc107; }
-        .status-issued { color: #0d6efd; }
-        .status-returned { color: #198754; }
+        
+        .btn-primary {
+            background: linear-gradient(90deg, var(--kit-orange) 0%, #ff8c00 100%);
+            border: none;
+            border-radius: 10px;
+            padding: 0.75rem 2rem;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 0, 0.3);
+        }
+        
+        .btn-outline-secondary {
+            border-radius: 10px;
+            padding: 0.75rem 2rem;
+            font-weight: 600;
+        }
+        
+        .info-box {
+            background: linear-gradient(135deg, rgba(255, 107, 0, 0.05) 0%, rgba(76, 175, 80, 0.05) 100%);
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+            border-left: 4px solid var(--kit-green);
+        }
+        
+        .color-strip {
+            height: 5px;
+            background: linear-gradient(90deg, var(--kit-orange) 0%, var(--kit-green) 100%);
+            border-radius: 5px;
+            margin: 1.5rem 0;
+        }
+        
+        .alert-warning {
+            border-radius: 10px;
+            border: 2px solid #ffc107;
+            background-color: rgba(255, 193, 7, 0.1);
+        }
     </style>
 </head>
 <body>
+    <!-- Шапка с логотипом -->
+    <header class="kit-header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-12 text-center">
+                    <div class="kit-logo">
+                        <i class="bi bi-journal-bookmark-fill"></i>
+                        Библиотека <span>KIT</span> колледжа
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+    
     <div class="container">
         <div class="status-container">
-            <h2 class="text-center mb-4">
+            <h2 class="text-center mb-4" style="color: var(--kit-orange);">
                 <i class="bi bi-search"></i> Проверка статуса запроса
             </h2>
+            
+            <div class="text-center mb-4">
+                <p class="text-muted">Введите номер запроса для проверки текущего статуса</p>
+            </div>
             
             {% with messages = get_flashed_messages() %}
                 {% if messages %}
                     <div class="alert alert-warning">
-                        {{ messages[0] }}
+                        <i class="bi bi-exclamation-triangle"></i> {{ messages[0] }}
                     </div>
                 {% endif %}
             {% endwith %}
             
             <form method="POST" action="{{ url_for('check_status') }}">
-                <div class="mb-3">
-                    <label for="request_id" class="form-label">Номер вашего запроса:</label>
+                <div class="mb-4">
+                    <label for="request_id" class="form-label">
+                        <i class="bi bi-hash"></i> Номер вашего запроса:
+                    </label>
                     <input type="text" class="form-control" id="request_id" name="request_id" 
                            placeholder="Например: 17" required>
-                    <div class="form-text">
-                        Введите номер, который вы получили при отправке запроса
+                    <div class="form-text text-muted mt-2">
+                        <i class="bi bi-lightbulb"></i> Введите номер, который вы получили при отправке запроса
                     </div>
                 </div>
+                
+                <div class="color-strip"></div>
                 
                 <div class="d-grid gap-2">
                     <button type="submit" class="btn btn-primary">
@@ -62,9 +179,11 @@
                 </div>
             </form>
 
-            <div class="mt-4 text-muted">
-                <h6><i class="bi bi-info-circle"></i> Как найти номер запроса?</h6>
-                <ul class="small">
+            <div class="info-box">
+                <h6 style="color: var(--kit-green);">
+                    <i class="bi bi-info-circle"></i> Как найти номер запроса?
+                </h6>
+                <ul class="small mt-2">
                     <li>Номер появляется в сообщении после отправки заявки</li>
                     <li>Сохраните этот номер для отслеживания</li>
                     <li>Или обратитесь к библиотекарю</li>
