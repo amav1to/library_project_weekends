@@ -27,7 +27,7 @@ app.secret_key = 'ваш-секретный-ключ-для-сессий-12345' 
 # Инициализируем базу данных с приложением
 db.init_app(app)
 
-ADMIN_PASSWORD = "library123"
+ADMIN_PASSWORD = "KitRulit"
 
 # Создаем все таблицы в базе данных (если их еще нет)
 with app.app_context():
@@ -183,7 +183,7 @@ def request_book():
         db.session.commit()
         
         # 7. Возвращаем сообщение с номером запроса
-        return f"✅ Запрос {request_number} отправлен! Ожидайте подтверждения библиотекаря."
+        return f"✅ Запрос #{new_request.id} отправлен! Ожидайте подтверждения библиотекаря."
         
     except ValueError:
         return "Ошибка: Неверное количество", 400

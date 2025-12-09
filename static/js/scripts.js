@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Показывать студентов при клике на поле
+    // Показывать студентов при клике на поле (ВСЕГДА показываем список)
     if (studentInput) {
         studentInput.addEventListener('click', function() {
             const groupId = currentGroupIdField.value;
@@ -78,10 +78,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            // Если поле пустое - показываем всех студентов
-            if (studentInput.value.trim() === '') {
-                loadAllStudents(groupId);
-            }
+            // ВСЕГДА показываем всех студентов при клике
+            loadAllStudents(groupId);
         });
     }
 
@@ -373,19 +371,18 @@ document.addEventListener('DOMContentLoaded', function() {
 function showSuccessModal(message) {
     console.log('Показываем успех:', message);
     
-    // Ищем номер в сообщении (формат: 071225-001)
-    const match = message.match(/(\d{6})-(\d{3})/); // Ищем ДДММГГ-XXX
+    // Ищем ID в сообщении (формат: "Запрос #15 отправлен!")
+    const match = message.match(/#(\d+)/); // Ищем #15
     
     if (match) {
-        const fullNumber = match[1] + '-' + match[2]; // 071225-001
-        const shortNumber = parseInt(match[2]); // 001 → 1
-        console.log('Полный номер:', fullNumber, 'Короткий:', shortNumber);
+        const requestId = match[1]; // 15
+        console.log('ID запроса:', requestId);
         
-        // Заполняем номер в модальном окне (показываем только короткий)
+        // Заполняем ID в модальном окне
         const requestIdElement = document.getElementById('requestId');
         if (requestIdElement) {
-            requestIdElement.textContent = shortNumber; // Просто 1
-            requestIdElement.dataset.fullNumber = fullNumber; // Сохраняем полный номер в data-атрибут
+            requestIdElement.textContent = requestId; // Просто 15
+            requestIdElement.dataset.fullNumber = requestId;
         }
         
         // Показываем модальное окно
@@ -398,6 +395,7 @@ function showSuccessModal(message) {
         alert(message);
     }
 }
+
 // ========== ДОБАВИТЬ В КОНЕЦ ФАЙЛА ==========
 
 // Кнопка очистки студента
