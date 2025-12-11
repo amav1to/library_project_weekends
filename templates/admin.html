@@ -131,6 +131,65 @@
             background: rgba(255, 255, 255, 0.3);
             border-color: white;
         }
+
+        /* Стили для новых кнопок фильтров */
+        .btn-check + .btn-outline-secondary:hover,
+        .btn-check:checked + .btn-outline-secondary {
+            background-color: #6c757d;
+            border-color: #6c757d;
+            color: white;
+        }
+
+        .btn-check + .btn-outline-primary:hover,
+        .btn-check:checked + .btn-outline-primary {
+            background-color: var(--kit-orange);
+            border-color: var(--kit-orange);
+            color: white;
+        }
+
+        .btn-check + .btn-outline-warning:hover,
+        .btn-check:checked + .btn-outline-warning {
+            background-color: #ffc107;
+            border-color: #ffc107;
+            color: #212529;
+        }
+
+        .btn-check + .btn-outline-info:hover,
+        .btn-check:checked + .btn-outline-info {
+            background-color: #17a2b8;
+            border-color: #17a2b8;
+            color: white;
+        }
+
+        /* Адаптивность */
+        @media (max-width: 768px) {
+            .btn-group .btn, .input-group {
+                margin-bottom: 5px;
+            }
+            
+            .col-md-6 {
+                margin-bottom: 15px;
+            }
+        }
+
+        /* Подсветка активного фильтра */
+        .filter-btn.active {
+            background-color: var(--kit-orange) !important;
+            border-color: var(--kit-orange) !important;
+            color: white !important;
+        }
+
+        /* Кнопка сброса */
+        .btn-reset {
+            background: linear-gradient(90deg, #6c757d 0%, #495057 100%);
+            color: white;
+            border: none;
+        }
+
+        .btn-reset:hover {
+            background: linear-gradient(90deg, #495057 0%, #343a40 100%);
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -185,21 +244,107 @@
                 </div>
             </div>
             
+            <!-- НОВЫЕ ФИЛЬТРЫ: ДАТА И ПОИСК -->
+            <div class="row mb-4">
+                <!-- ПОИСК ПО ФИО -->
+                <div class="col-md-6 mb-3">
+                    <div class="input-group">
+                        <span class="input-group-text" style="background: rgba(255, 107, 0, 0.1);">
+                            <i class="bi bi-search" style="color: var(--kit-orange);"></i>
+                        </span>
+                        <input type="text" 
+                            class="form-control" 
+                            id="searchInput" 
+                            placeholder="Поиск по ФИО студента..."
+                            value="{{ search_query }}"
+                            onkeypress="handleSearchEnter(event)">
+                        <button class="btn btn-primary" type="button" onclick="applySearch()">
+                            <i class="bi bi-arrow-right"></i>
+                        </button>
+                    </div>
+                    <small class="text-muted">Нажмите Enter для поиска</small>
+                </div>
+                
+                <!-- ФИЛЬТРЫ ПО ДАТЕ -->
+                <div class="col-md-6 mb-3">
+                    <div class="btn-group" role="group">
+                        <!-- Все даты -->
+                        <input type="radio" class="btn-check" name="date_filter" id="date_all" 
+                            value="all" autocomplete="off" 
+                            {% if current_date == 'all' %}checked{% endif %}
+                            onchange="applyDateFilter(this.value)">
+                        <label class="btn btn-outline-secondary" for="date_all" title="Все даты">
+                            <i class="bi bi-calendar"></i> Все
+                        </label>
+                        
+                        <!-- Сегодня -->
+                        <input type="radio" class="btn-check" name="date_filter" id="date_today" 
+                            value="today" autocomplete="off"
+                            {% if current_date == 'today' %}checked{% endif %}
+                            onchange="applyDateFilter(this.value)">
+                        <label class="btn btn-outline-primary" for="date_today" title="Сегодня">
+                            <i class="bi bi-sun"></i> Сегодня
+                        </label>
+                        
+                        <!-- Вчера -->
+                        <input type="radio" class="btn-check" name="date_filter" id="date_yesterday" 
+                            value="yesterday" autocomplete="off"
+                            {% if current_date == 'yesterday' %}checked{% endif %}
+                            onchange="applyDateFilter(this.value)">
+                        <label class="btn btn-outline-warning" for="date_yesterday" title="Вчера">
+                            <i class="bi bi-moon"></i> Вчера
+                        </label>
+                        
+                        <!-- Кастомная дата с отдельной кнопкой -->
+                        <div class="input-group" style="width: auto;">
+                            <input type="date" 
+                                class="form-control" 
+                                id="customDateInput"
+                                value="{{ custom_date }}"
+                                style="max-width: 150px;">
+                            <button class="btn btn-outline-info" type="button" onclick="applyCustomDate()" 
+                                    title="Применить выбранную дату">
+                                <i class="bi bi-calendar-check"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2 style="color: var(--kit-orange);">
                     <i class="bi bi-list-task"></i> Запросы на выдачу книг
+                    {% if search_query %}
+                        <small class="text-muted fs-6">по запросу "{{ search_query }}"</small>
+                    {% endif %}
                 </h2>
+                
+                <!-- В блоке с заголовком, после <h2> -->
+                <div class="d-flex align-items-center gap-2">
+                    {% if current_status != 'all' or current_date != 'all' or search_query %}
+                    <button class="btn btn-sm btn-reset" onclick="resetAllFilters()" 
+                            title="Сбросить все фильтры">
+                        <i class="bi bi-x-circle"></i> Сбросить
+                    </button>
+                    {% endif %}
+                </div>
+
+                <!-- СТАТИСТИКА (оставляем как было) -->
                 <div class="btn-group">
-                    <button class="btn filter-btn btn-outline-primary active" data-filter="all">
+                    <button class="btn filter-btn btn-outline-primary {% if current_status == 'all' %}active{% endif %}" 
+                            onclick="applyStatusFilter('all')">
                         <i class="bi bi-grid"></i> Все
                     </button>
-                    <button class="btn filter-btn btn-outline-warning" data-filter="waiting">
+                    <button class="btn filter-btn btn-outline-warning {% if current_status == 'ожидание' %}active{% endif %}" 
+                            onclick="applyStatusFilter('ожидание')">
                         <i class="bi bi-clock"></i> Ожидание
                     </button>
-                    <button class="btn filter-btn btn-outline-info" data-filter="issued">
+                    <button class="btn filter-btn btn-outline-info {% if current_status == 'выдано' %}active{% endif %}" 
+                            onclick="applyStatusFilter('выдано')">
                         <i class="bi bi-check-circle"></i> Выдано
                     </button>
-                    <button class="btn filter-btn btn-outline-success" data-filter="returned">
+                    <button class="btn filter-btn btn-outline-success {% if current_status == 'возвращено' %}active{% endif %}" 
+                            onclick="applyStatusFilter('возвращено')">
                         <i class="bi bi-arrow-return-left"></i> Возвращено
                     </button>
                 </div>
@@ -475,6 +620,118 @@
                 }
             });
         }
+
+        // Текущие параметры фильтрации
+        let currentParams = new URLSearchParams(window.location.search);
+
+        // ФИЛЬТР ПО СТАТУСУ (старый функционал - обновляем)
+        function applyStatusFilter(status) {
+            currentParams.set('status', status);
+            window.location.href = `/admin/filter?${currentParams.toString()}`;
+        }
+
+        // ФИЛЬТР ПО ДАТЕ (новый функционал)
+        function applyDateFilter(dateType) {
+            currentParams.set('date', dateType);
+            
+            // Если выбрали не кастомную дату, удаляем параметр custom_date
+            if (dateType !== 'custom') {
+                currentParams.delete('custom_date');
+                window.location.href = `/admin/filter?${currentParams.toString()}`;
+            } else {
+                // Для кастомной даты показываем поле ввода
+                document.getElementById('customDateInput').focus();
+            }
+        }
+
+        // ВЫБОР КАСТОМНОЙ ДАТЫ
+        function applyCustomDate() {
+            const dateInput = document.getElementById('customDateInput');
+            const dateValue = dateInput.value;
+            
+            if (dateValue) {
+                // Создаем временную радио-кнопку для кастомной даты
+                currentParams.set('date', 'custom');
+                currentParams.set('custom_date', dateValue);
+                window.location.href = `/admin/filter?${currentParams.toString()}`;
+            } else {
+                alert('Выберите дату в календаре');
+            }
+        }
+
+        // ПОИСК ПО ФИО
+        function handleSearchEnter(event) {
+            if (event.key === 'Enter') {
+                applySearch();
+                event.preventDefault();
+            }
+        }
+
+        function applySearch() {
+            const searchInput = document.getElementById('searchInput');
+            const searchValue = searchInput.value.trim();
+            
+            if (searchValue) {
+                currentParams.set('search', searchValue);
+            } else {
+                currentParams.delete('search');
+            }
+            
+            window.location.href = `/admin/filter?${currentParams.toString()}`;
+        }
+
+        // ИНИЦИАЛИЗАЦИЯ КАЛЕНДАРЯ
+        document.addEventListener('DOMContentLoaded', function() {
+            // Установить максимальную дату (сегодня) для календаря
+            const today = new Date().toISOString().split('T')[0];
+            const dateInput = document.getElementById('customDateInput');
+            dateInput.max = today;
+            
+            // Если есть кастомная дата в параметрах, показать ее
+            if (currentParams.get('date') === 'custom' && currentParams.get('custom_date')) {
+                dateInput.value = currentParams.get('custom_date');
+                
+                // Создаем виртуальную радио-кнопку для кастомной даты
+                createCustomDateRadio();
+            }
+            
+            // Обработчик изменения даты в календаре
+            dateInput.addEventListener('change', function() {
+                if (this.value) {
+                    // Автоматически применяем фильтр при выборе даты
+                    applyCustomDate();
+                }
+            });
+        });
+
+        // Создаем виртуальную радио-кнопку для кастомной даты
+        function createCustomDateRadio() {
+            // Убираем активное состояние у других радио-кнопок
+            document.querySelectorAll('input[name="date_filter"]').forEach(radio => {
+                radio.checked = false;
+            });
+            
+            // Можно добавить визуальное выделение для кастомной даты
+            const dateInput = document.getElementById('customDateInput');
+            dateInput.style.borderColor = '#17a2b8';
+            dateInput.style.boxShadow = '0 0 0 0.25rem rgba(23, 162, 184, 0.25)';
+        }
+
+        // Автоматическое применение при выборе даты из календаря
+        document.getElementById('customDateInput').addEventListener('change', function() {
+            if (this.value) {
+                // Даем небольшую задержку для UX
+                setTimeout(() => {
+                    applyCustomDate();
+                }, 300);
+            }
+        });
+
+        // СБРОС ВСЕХ ФИЛЬТРОВ
+        function resetAllFilters() {
+            window.location.href = '/admin';
+        }
+
     </script>
 </body>
 </html>

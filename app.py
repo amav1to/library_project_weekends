@@ -243,12 +243,14 @@ def admin_logout():
 @app.route('/admin')
 @admin_required
 def admin_dashboard():
-    """Главная страница админ-панели"""
-    # Получаем все запросы из БД
+    """Главная страница админ-панели (без фильтрации)"""
     requests = BookRequest.query.order_by(BookRequest.request_date.desc()).all()
-    
-    # Передаем данные в шаблон
-    return render_template('admin.html', requests=requests)
+    return render_template('admin.html', 
+                         requests=requests,
+                         current_status='all',
+                         current_date='all',
+                         search_query='',
+                         custom_date='')
 
 @app.route('/admin/confirm-issue/<int:request_id>', methods=['POST'])
 @admin_required
@@ -409,6 +411,55 @@ def status_result(request_id):
     """Детальная страница статуса запроса"""
     book_request = BookRequest.query.get_or_404(request_id)
     return render_template('status_result.html', book_request=book_request)
+
+@app.route('/admin/filter', methods=['GET'])
+@admin_required
+def admin_filter():
+    """Фильтрация запросов для админ-панели"""
+    
+    # Получаем параметры фильтрации
+    date_filter = request.args.get('date', 'all')
+    status_filter = request.args.get('status', 'all')
+    search_query = request.args.get('search', '').strip()
+    custom_date = request.args.get('custom_date', '')
+    
+    # Базовый запрос
+    query = BookRequest.query
+    
+    # Фильтр по статусу (старый функционал)
+    if status_filter != 'all':
+        query = query.filter(BookRequest.status == status_filter)
+    
+    # Фильтр по дате (новый функционал)
+    today_date = datetime.now().date()
+    
+    if date_filter == 'today':
+        query = query.filter(db.func.date(BookRequest.request_date) == today_date)
+    elif date_filter == 'yesterday':
+        yesterday_date = (datetime.now() - timedelta(days=1)).date()
+        query = query.filter(db.func.date(BookRequest.request_date) == yesterday_date)
+    elif date_filter == 'custom' and custom_date:
+        try:
+            custom_date_obj = datetime.strptime(custom_date, '%Y-%m-%d').date()
+            query = query.filter(db.func.date(BookRequest.request_date) == custom_date_obj)
+        except ValueError:
+            pass
+    
+    # Поиск по ФИО студента
+    if search_query:
+        query = query.join(Student).filter(
+            Student.full_name.ilike(f'%{search_query}%')
+        )
+    
+    # Сортировка по дате (новые сверху)
+    requests = query.order_by(BookRequest.request_date.desc()).all()
+    
+    return render_template('admin.html', 
+                         requests=requests,
+                         current_status=status_filter,
+                         current_date=date_filter,
+                         search_query=search_query,
+                         custom_date=custom_date)
 
 # Запуск приложения
 if __name__ == '__main__':
