@@ -92,6 +92,32 @@ class BookRequest(db.Model):
     
     # Связь с книгой
     book = db.relationship('Book', backref='requests')
+
+    # Диапазон экземпляров книги, закреплённых за этим запросом.
+    # Например, для книги с id=105 и 3 экземпляров: 105(01-03)
+    copy_start_index = db.Column(db.Integer, nullable=True)
+    copy_end_index = db.Column(db.Integer, nullable=True)
+
+    @property
+    def copy_range_display(self):
+        """
+        Возвращает человеко‑читаемую строку с диапазоном экземпляров.
+        Примеры:
+        - "105(01)"       если один экземпляр
+        - "105(01-25)"    если несколько экземпляров
+        Если диапазон не назначен, возвращает "-".
+        """
+        if not self.book or self.copy_start_index is None:
+            return "-"
+
+        book_code = self.book.id  # Можно заменить на отдельное поле-код, если нужно
+
+        start_str = f"{self.copy_start_index:02d}"
+        if self.copy_end_index and self.copy_end_index != self.copy_start_index:
+            end_str = f"{self.copy_end_index:02d}"
+            return f"{book_code}({start_str}-{end_str})"
+        else:
+            return f"{book_code}({start_str})"
     
     def __repr__(self):
         return f'<BookRequest {self.id}: {self.status}>'

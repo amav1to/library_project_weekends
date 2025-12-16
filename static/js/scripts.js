@@ -150,7 +150,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 books.forEach(book => {
                     const option = document.createElement('option');
                     option.value = book.id;
-                    option.textContent = `${book.name} (доступно: ${book.available})`;
+                    // Формируем строку с диапазоном ID экземпляров,
+                    // например: "ID: 105(01-25)"
+                    let copiesInfo = '';
+                    if (book.copy_start && book.copy_end) {
+                        const startStr = String(book.copy_start).padStart(2, '0');
+                        const endStr = String(book.copy_end).padStart(2, '0');
+                        const rangeStr = (book.copy_start === book.copy_end)
+                            ? `${startStr}`
+                            : `${startStr}-${endStr}`;
+                        // Код книги = её ID в базе (можно заменить на отдельное поле, если нужно)
+                        copiesInfo = ` | ID: ${book.id}(${rangeStr})`;
+                    }
+
+                    option.textContent = `${book.name} (доступно: ${book.available})${copiesInfo}`;
                     bookSelect.appendChild(option);
                 });
                 

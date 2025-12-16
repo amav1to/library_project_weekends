@@ -360,6 +360,7 @@
                             <th><i class="bi bi-people"></i> Группа</th>
                             <th><i class="bi bi-book"></i> Книга</th>
                             <th><i class="bi bi-hash"></i> Кол-во</th>
+                            <th><i class="bi bi-123"></i> ID экземпляров</th>
                             <th><i class="bi bi-calendar"></i> Дата запроса</th>
                             <th><i class="bi bi-tag"></i> Статус</th>
                             <th><i class="bi bi-gear"></i> Действия</th>
@@ -389,6 +390,11 @@
                             </td>
                             <td>
                                 <span class="badge bg-primary">{{ req.quantity }}</span>
+                            </td>
+                            <td>
+                                <small class="text-muted">
+                                    {{ req.copy_range_display }}
+                                </small>
                             </td>
                             <td>
                                 <small>

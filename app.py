@@ -61,10 +61,19 @@ def get_books(group_id):
     for book in books:
         # Показываем только книги, которые доступны
         if book.available_quantity > 0:
+            # Сколько экземпляров уже "занято" (выдано и ещё не возвращено)
+            already_issued = book.total_quantity - book.available_quantity
+
+            # Свободные экземпляры идут подряд от already_issued+1 до total_quantity
+            free_start = already_issued + 1
+            free_end = book.total_quantity
+
             books_list.append({
                 'id': book.id,
                 'name': f"{book.name} ({book.author}, {book.year})",
-                'available': book.available_quantity
+                'available': book.available_quantity,
+                'copy_start': free_start,
+                'copy_end': free_end
             })
     
     return jsonify(books_list)
@@ -168,17 +177,24 @@ def request_book():
         
         # Форматируем номер с ведущими нулями: 001, 002, ...
         request_number = f'{today}-{next_number:03d}'  # Пример: "140324-001"
+
+        # 6. Считаем диапазон экземпляров ДЛЯ ЭТОЙ ЗАЯВКИ
+        already_issued = book.total_quantity - book.available_quantity
+        start_index = already_issued + 1
+        end_index = already_issued + quantity
         
-        # 6. Создаем запись в журнале
+        # 7. Создаем запись в журнале
         new_request = BookRequest(
             student_id=student_id,
             book_id=book_id,
             quantity=quantity,
             status='ожидание',
             request_date=datetime.now(),
-            request_number=request_number  # ← СОХРАНЯЕМ НОВЫЙ НОМЕР
+            request_number=request_number,
+            copy_start_index=start_index,
+            copy_end_index=end_index
         )
-        
+
         db.session.add(new_request)
         db.session.commit()
         
@@ -270,15 +286,26 @@ def confirm_issue(request_id):
             
         if book_request.quantity > book.available_quantity:
             return jsonify({'success': False, 'error': f'Недостаточно книг. Доступно: {book.available_quantity}'}), 400
+
+        # Текущие "занятые" экземпляры = всего - доступно.
+        # Например: всего 50, доступно 25 → занято 25 → свободны 26‑50.
+        already_issued = book.total_quantity - book.available_quantity
+
+        # Назначаем диапазон экземпляров для этого запроса:
+        # начинаем с первого свободного и берём quantity штук подряд.
+        start_index = already_issued + 1
+        end_index = already_issued + book_request.quantity
+
+        book_request.copy_start_index = start_index
+        book_request.copy_end_index = end_index
         
         # Обновляем статус и дату выдачи
         book_request.status = 'выдано'
         book_request.issue_date = datetime.now()
         book_request.planned_return_date = datetime.now() + timedelta(minutes=90)
-        
-        # Уменьшаем количество доступных книг
+
         book.available_quantity -= book_request.quantity
-        
+
         db.session.commit()
         
         return jsonify({'success': True, 'message': 'Выдача подтверждена'})
