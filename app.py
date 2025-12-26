@@ -83,7 +83,7 @@ def get_students(group_id):
 
 @app.route('/request-book', methods=['POST'])
 def request_book():
-    """Создание запроса студентом с привязкой экземпляров"""
+    """Создание запроса студентом — БЕЗ резервирования экземпляров"""
     try:
         student_id = request.form.get('student_id')
         book_id = request.form.get('book_id')
@@ -108,6 +108,22 @@ def request_book():
         if book.language != student.group.language or book.course != student.group.course:
             return "Ошибка: Эта книга не для вашей группы", 400
         
+        # Проверка кодов экземпляров (только валидация, без резервирования)
+        if not copy_codes_str:
+            return "Ошибка: Не прикреплены экземпляры (отсканируйте или введите коды)", 400
+        
+        codes_list = [c.strip() for c in copy_codes_str.split(',') if c.strip()]
+        if len(codes_list) != quantity:
+            return f"Ошибка: Прикреплено {len(codes_list)} экземпляров, ожидалось {quantity}", 400
+        
+        for code in codes_list:
+            copy = BookCopy.query.filter_by(copy_code=code).first()
+            if not copy:
+                return f"Ошибка: Экземпляр с кодом {code} не найден в системе", 400
+            if copy.book_id != book.id:
+                return f"Ошибка: Экземпляр {code} принадлежит другой книге", 400
+            # НЕ проверяем is_available — разрешаем выбирать даже занятые (библиотекарь решит)
+        
         # Генерация номера запроса
         today = datetime.now().strftime('%d%m%y')
         last_request = BookRequest.query.filter(
@@ -121,39 +137,24 @@ def request_book():
         
         request_number = f'{today}-{next_number:03d}'
         
-        # Создаём запрос и сохраняем, чтобы получить ID
+        # Создаём запрос БЕЗ привязки экземпляров
         new_request = BookRequest(
             student_id=student_id,
             book_id=book_id,
             quantity=quantity,
             status='ожидание',
             request_date=datetime.now(),
-            request_number=request_number
+            request_number=request_number,
+            requested_copy_codes = ','.join(codes_list)  # Сохраняем запрошенные коды
         )
         db.session.add(new_request)
-        db.session.commit()  # Теперь new_request.id существует
-        
-        # Проверка и привязка кодов
-        codes_list = [c.strip() for c in copy_codes_str.split(',') if c.strip()]
-        if len(codes_list) != quantity:
-            return f"Ошибка: Прикреплено {len(codes_list)} экземпляров, ожидалось {quantity}", 400
-        
-        for code in codes_list:
-            copy = BookCopy.query.filter_by(copy_code=code, book_id=book_id).first()
-            if not copy:
-                return f"Ошибка: Экземпляр {code} не найден или не принадлежит этой книге", 400
-            if not copy.is_available:
-                return f"Ошибка: Экземпляр {code} уже выдан", 400
-            copy.current_request_id = new_request.id
-            copy.is_available = False
-        
         db.session.commit()
         
-        return f"✅ Запрос #{new_request.id} отправлен! Экземпляры зарезервированы."
+        return f"✅ Запрос #{new_request.id} отправлен!"
         
     except Exception as e:
         db.session.rollback()
-        return f"Ошибка сервера: {str(e)}", 500
+        return f"Ошибка: {str(e)}", 500
 
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
@@ -229,22 +230,53 @@ def assign_copy_ids(request_id):
 @app.route('/admin/confirm-issue/<int:request_id>', methods=['POST'])
 @admin_required
 def confirm_issue(request_id):
-    """Подтверждение выдачи — проверяем, что все экземпляры привязаны"""
     try:
         book_request = BookRequest.query.get_or_404(request_id)
         
         if book_request.status != 'ожидание':
             return jsonify({'success': False, 'error': 'Запрос уже обработан'}), 400
         
-        # Проверяем, что все нужные экземпляры привязаны
-        assigned_copies = BookCopy.query.filter_by(current_request_id=book_request.id).count()
-        if assigned_copies != book_request.quantity:
-            return jsonify({'success': False, 'error': f'Привязано только {assigned_copies} из {book_request.quantity} экземпляров. Отсканируйте все QR-коды.'}), 400
+        # Получаем запрошенные студентом коды
+        codes_str = book_request.requested_copy_codes or ''
+        if not codes_str:
+            return jsonify({'success': False, 'error': 'У запроса нет прикреплённых экземпляров. Отсканируйте QR-коды заново.'}), 400
         
-        # Всё ок — подтверждаем выдачу
+        codes_list = [c.strip() for c in codes_str.split(',') if c.strip()]
+        if len(codes_list) != book_request.quantity:
+            return jsonify({'success': False, 'error': f'Количество кодов ({len(codes_list)}) не совпадает с запросом ({book_request.quantity})'}), 400
+        
+        # Пытаемся зарезервировать каждый экземпляр
+        reserved_copies = []
+        conflicts = []
+        for code in codes_list:
+            copy = BookCopy.query.filter_by(copy_code=code, book_id=book_request.book_id).first()
+            if not copy:
+                conflicts.append(f"{code} (не найден)")
+                continue
+            if not copy.is_available:
+                # Находим, кому выдан
+                if copy.current_request_id:
+                    conflict_request = BookRequest.query.get(copy.current_request_id)
+                    student_name = conflict_request.student.full_name if conflict_request and conflict_request.student else "Неизвестно"
+                    conflicts.append(f"{code} (выдан студенту {student_name})")
+                else:
+                    conflicts.append(f"{code} (уже занят)")
+                continue
+            reserved_copies.append(copy)
+        
+        # Если есть конфликты — не подтверждаем
+        if conflicts:
+            conflict_msg = "; ".join(conflicts)
+            return jsonify({'success': False, 'error': f'Невозможно выдать: {conflict_msg}'}), 400
+        
+        # Всё ок — резервируем
+        for copy in reserved_copies:
+            copy.current_request_id = book_request.id
+            copy.is_available = False
+        
         book_request.status = 'выдано'
         book_request.issue_date = datetime.now()
-        book_request.planned_return_date = datetime.now() + timedelta(days=14)  # 14 дней на возврат
+        book_request.planned_return_date = datetime.now() + timedelta(days=14)
         
         db.session.commit()
         
@@ -289,11 +321,11 @@ def reject_request(request_id):
         if book_request.status != 'ожидание':
             return jsonify({'success': False, 'error': 'Запрос уже обработан'}), 400
         
-        # Если были привязаны копии — освобождаем их
-        copies = BookCopy.query.filter_by(current_request_id=book_request.id).all()
-        for copy in copies:
-            copy.is_available = True
-            copy.current_request_id = None
+        # Очищаем привязанные экземпляры (если были)
+        BookCopy.query.filter_by(current_request_id=book_request.id).update({
+            'current_request_id': None,
+            'is_available': True
+        })
         
         db.session.delete(book_request)
         db.session.commit()

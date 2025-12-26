@@ -3,110 +3,163 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Библиотека KIT</title>
+    <title>Библиотека - Взять книгу</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+   
     <style>
         :root {
             --kit-orange: #ff6b00;
             --kit-green: #4CAF50;
+            --kit-white: #ffffff;
+            --kit-gray: #f8f9fa;
         }
-        
+       
         body {
             background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
             min-height: 100vh;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        
+       
         .kit-header {
             background: linear-gradient(90deg, var(--kit-orange) 0%, #ff8c00 100%);
-            padding: 1.5rem 0;
+            padding: 1rem 0;
+            margin-bottom: 2rem;
             box-shadow: 0 4px 12px rgba(255, 107, 0, 0.15);
         }
-        
+       
         .kit-logo {
-            font-size: 2rem;
+            font-size: 2.5rem;
             font-weight: 700;
             color: white;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
         }
-        
+       
         .kit-logo span {
             color: var(--kit-green);
         }
-        
+       
         .main-container {
             max-width: 800px;
-            margin: 2rem auto;
-            padding: 0 1rem;
+            margin: 0 auto;
+            padding: 2rem;
         }
-        
+       
         .welcome-card {
             background: white;
             border-radius: 15px;
-            padding: 2rem;
+            padding: 2.5rem;
             box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-            text-align: center;
+            border: none;
             margin-bottom: 2rem;
+            text-align: center;
             border-top: 5px solid var(--kit-orange);
         }
-        
+       
+        .welcome-title {
+            color: var(--kit-orange);
+            font-weight: 700;
+            margin-bottom: 1rem;
+            font-size: 2rem;
+        }
+       
+        .welcome-subtitle {
+            color: #666;
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto 2rem;
+        }
+       
         .form-container {
             background: white;
             border-radius: 15px;
-            padding: 2rem;
+            padding: 2.5rem;
             box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            border: none;
             border-top: 5px solid var(--kit-green);
         }
-        
+       
         .form-label {
             font-weight: 600;
             color: #333;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
-        
+       
+        .form-label i {
+            color: var(--kit-orange);
+            font-size: 1.2rem;
+        }
+       
+        .input-group {
+            position: relative;
+        }
+       
         .form-control, .form-select {
             border: 2px solid #e0e0e0;
             border-radius: 10px;
             padding: 0.75rem 1rem;
+            font-size: 1rem;
             transition: all 0.3s;
         }
-        
+       
         .form-control:focus, .form-select:focus {
             border-color: var(--kit-orange);
             box-shadow: 0 0 0 0.25rem rgba(255, 107, 0, 0.25);
         }
-        
+       
         input[type="number"]::-webkit-inner-spin-button,
         input[type="number"]::-webkit-outer-spin-button {
             -webkit-appearance: none;
             margin: 0;
         }
+       
         input[type="number"] {
-            -webkit-appearance: none;
             -moz-appearance: textfield;
-            appearance: none;
+            -webkit-appearance: textfield;
+            appearance: textfield;
         }
-        
+       
         .btn-primary {
             background: linear-gradient(90deg, var(--kit-orange) 0%, #ff8c00 100%);
             border: none;
             border-radius: 10px;
             padding: 0.75rem 2rem;
             font-weight: 600;
+            font-size: 1.1rem;
             transition: all 0.3s;
+            margin-top: 1rem;
         }
-        
+       
         .btn-primary:hover {
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(255, 107, 0, 0.3);
         }
-        
+       
         .btn-info {
             background: var(--kit-green);
             border: none;
+            border-radius: 10px;
+            padding: 0.75rem 1rem;
         }
-        
+       
+        .btn-info:hover {
+            background: #45a049;
+        }
+       
+        .status-check-card {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            border: none;
+            border-left: 5px solid var(--kit-green);
+            margin-top: 2rem;
+        }
+       
         #student-suggestions {
             position: absolute;
             z-index: 1000;
@@ -119,18 +172,74 @@
             background: white;
             margin-top: 0.25rem;
         }
-        
+       
         #student-suggestions .list-group-item {
             border: none;
             padding: 0.75rem 1rem;
             border-bottom: 1px solid #f0f0f0;
         }
-        
+       
         #student-suggestions .list-group-item:hover {
             background-color: rgba(255, 107, 0, 0.1);
             color: var(--kit-orange);
         }
-        
+       
+        .form-icon {
+            color: var(--kit-orange);
+            font-size: 1.5rem;
+            margin-right: 0.5rem;
+        }
+       
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+       
+        .welcome-card, .form-container {
+            animation: fadeIn 0.6s ease-out;
+        }
+       
+        .kit-decoration {
+            position: fixed;
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, rgba(255, 107, 0, 0.05) 0%, rgba(76, 175, 80, 0.05) 100%);
+            z-index: -1;
+        }
+       
+        .decoration-1 {
+            top: 10%;
+            right: 10%;
+        }
+       
+        .decoration-2 {
+            bottom: 10%;
+            left: 10%;
+        }
+       
+        .color-strip {
+            height: 5px;
+            background: linear-gradient(90deg, var(--kit-orange) 0%, var(--kit-green) 100%);
+            border-radius: 5px;
+            margin: 1rem 0;
+        }
+       
+        .input-group .btn-outline-secondary {
+            display: none !important;
+        }
+       
+        .input-group-text {
+            background: rgba(255, 107, 0, 0.1);
+            border-color: #e0e0e0;
+            border-right: none;
+        }
+       
+        .input-group .form-control {
+            border-left: none;
+        }
+
+        /* QR-сканер для студента */
         .qr-scanner-container {
             position: relative;
             width: 100%;
@@ -140,12 +249,13 @@
             border-radius: 10px;
             overflow: hidden;
         }
-        
+
         #qr-student-video {
             width: 100%;
             height: auto;
+            transform: scaleX(-1);
         }
-        
+
         .scanner-overlay {
             position: absolute;
             top: 0;
@@ -155,14 +265,15 @@
             pointer-events: none;
             border: 2px solid rgba(255, 107, 0, 0.5);
             box-shadow: inset 0 0 0 1000px rgba(0, 0, 0, 0.3);
+            transform: scaleX(-1);
         }
-        
+
         .attached-count {
             margin-top: 1rem;
             font-weight: bold;
-            font-size: 1.1em;
+            color: var(--kit-orange);
         }
-        
+
         .attached-list {
             margin-top: 1rem;
             max-height: 150px;
@@ -170,85 +281,85 @@
             padding: 0.5rem;
             background: #f8f9fa;
             border-radius: 8px;
-        }
-        
-        .color-strip {
-            height: 5px;
-            background: linear-gradient(90deg, var(--kit-orange) 0%, var(--kit-green) 100%);
-            border-radius: 5px;
-            margin: 1.5rem 0;
-        }
-        /* Зеркальное отражение камеры */
-        .mirrored-video {
-            transform: scaleX(-1);
-        }
-
-        /* Оверлей тоже должен быть отзеркален, чтобы рамка совпадала */
-        .mirrored-overlay {
-            transform: scaleX(-1);
+            border: 1px solid #e0e0e0;
         }
     </style>
 </head>
 <body>
+    <!-- Декоративные элементы -->
+    <div class="kit-decoration decoration-1"></div>
+    <div class="kit-decoration decoration-2"></div>
+   
+    <!-- Шапка с логотипом -->
     <header class="kit-header">
         <div class="container">
-            <div class="text-center">
-                <div class="kit-logo">
-                    <i class="bi bi-journal-bookmark-fill"></i>
-                    Библиотека <span>KIT</span> колледжа
+            <div class="row align-items-center">
+                <div class="col-12 text-center">
+                    <div class="kit-logo">
+                        <i class="bi bi-journal-bookmark-fill"></i>
+                        Библиотека <span>KIT</span> колледжа
+                    </div>
                 </div>
             </div>
         </div>
     </header>
-    
+   
     <div class="main-container">
+        <!-- Приветственная карточка -->
         <div class="welcome-card">
             <h1 class="welcome-title">
                 <i class="bi bi-journal-text"></i> Автоматизированная система выдачи книг
             </h1>
             <p class="welcome-subtitle">
-                Удобный способ получения учебной литературы
+                Удобный и современный способ получения учебной литературы для студентов колледжа KIT
             </p>
             <div class="color-strip"></div>
             <p class="text-muted">
-                <i class="bi bi-info-circle"></i>
-                Выберите группу, найдите себя и отсканируйте QR-коды нужных экземпляров
+                <i class="bi bi-info-circle" style="color: var(--kit-orange);"></i>
+                Выберите группу, найдите себя в списке и отсканируйте QR-коды нужных экземпляров
             </p>
         </div>
-        
+       
+        <!-- Форма для заявки -->
         <div class="form-container">
             <h3 class="mb-4" style="color: var(--kit-orange);">
                 <i class="bi bi-journal-plus"></i> Заявка на получение книги
             </h3>
-            
+           
             <form method="POST" action="/request-book" id="bookRequestForm">
+                <!-- Выбор группы -->
                 <div class="mb-4">
                     <label for="group" class="form-label">
                         <i class="bi bi-people-fill"></i> Ваша группа:
                     </label>
                     <select class="form-select" id="group" name="group_id" required>
-                        <option value="">-- Выберите группу --</option>
+                        <option value="">-- Выберите группу из списка --</option>
                     </select>
                     <input type="hidden" id="current_group_id" name="current_group_id">
                 </div>
-
+                <!-- Поиск студента -->
                 <div class="mb-4">
                     <label for="student" class="form-label">
                         <i class="bi bi-person-badge"></i> ФИО студента:
                     </label>
                     <div class="input-group">
-                        <span class="input-group-text">
-                            <i class="bi bi-person"></i>
+                        <span class="input-group-text" style="background: rgba(255, 107, 0, 0.1); border-color: #e0e0e0;">
+                            <i class="bi bi-person" style="color: var(--kit-orange);"></i>
                         </span>
-                        <input type="text" class="form-control" id="student" placeholder="Начните вводить ФИО" autocomplete="off">
-                        <button type="button" class="btn btn-outline-secondary" id="clear-student">
-                            <i class="bi bi-x"></i>
-                        </button>
+                        <input type="text" class="form-control" id="student"
+                            placeholder="Например: Иванов Иван"
+                            autocomplete="off">
                     </div>
                     <input type="hidden" name="student_id" id="student_id" required>
-                    <div id="student-suggestions" class="list-group mt-2" style="display: none;"></div>
+                    <div class="form-text text-muted">
+                        <i class="bi bi-lightbulb"></i> Выберите себя из появившегося списка
+                    </div>
+                   
+                    <div id="student-suggestions" class="list-group mt-2" style="display: none;">
+                    </div>
                 </div>
-                
+               
+                <!-- Выбор книги -->
                 <div class="mb-4">
                     <label for="book" class="form-label">
                         <i class="bi bi-book"></i> Книга:
@@ -257,32 +368,57 @@
                         <option value="">-- Сначала выберите группу --</option>
                     </select>
                 </div>
-                
+               
+                <!-- Количество экземпляров -->
                 <div class="mb-4">
                     <label for="quantity" class="form-label">
                         <i class="bi bi-hash"></i> Количество экземпляров:
                     </label>
-                    <div class="input-group" style="max-width: 300px;">
-                        <input type="number" class="form-control" id="quantity" name="quantity" min="1" value="1" required>
+                    <div class="d-flex align-items-center gap-2" style="max-width: 400px;">
+                        <input type="number"
+                            class="form-control text-center"
+                            id="quantity"
+                            name="quantity"
+                            min="1"
+                            value="1"
+                            required
+                            style="flex: 1;">
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-outline-secondary" id="decrease-quantity">
+                                <i class="bi bi-dash-lg"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" id="increase-quantity">
+                                <i class="bi bi-plus-lg"></i>
+                            </button>
+                        </div>
                         <button type="button" class="btn btn-info" onclick="openStudentScanner()">
                             <i class="bi bi-qr-code-scan"></i> Скан QR
                         </button>
                     </div>
-                    <small class="text-muted">Отсканируйте QR-коды на книгах (ровно столько, сколько указано)</small>
                     
-                    <div class="attached-count" id="studentAttachedCount">Прикреплено экземпляров: 0</div>
-                    <div class="attached-list border mt-2 p-2" id="studentAttachedList"></div>
-                    
+                    <div class="form-text text-muted mt-2">
+                        <i class="bi bi-info-circle"></i> Используйте кнопки + / - или отсканируйте нужное количество экземпляров
+                    </div>
+
+                    <!-- Счётчик прикреплённых -->
+                    <div class="attached-count" id="studentAttachedCount">Прикреплено экземпляров: 0 из 1</div>
+                    <div class="attached-list" id="studentAttachedList"></div>
+
+                    <!-- Ручной ввод -->
                     <div class="mt-3">
-                        <label for="manualStudentCodes">Ручной ввод кодов (по одному на строку):</label>
-                        <textarea id="manualStudentCodes" class="form-control" rows="4" placeholder="10501&#10;10502&#10;10503"></textarea>
+                        <label for="manualStudentCodes" class="form-label">
+                            <i class="bi bi-pencil-square"></i> Ручной ввод кодов (по одному на строку):
+                        </label>
+                        <textarea id="manualStudentCodes" class="form-control" rows="4" placeholder="Например:&#10;10501&#10;10502"></textarea>
                     </div>
                 </div>
-                
+
+                <!-- Скрытое поле для кодов -->
                 <input type="hidden" name="copy_codes" id="copy_codes_hidden">
-                
+               
                 <div class="color-strip"></div>
-                
+               
+                <!-- Кнопка отправки -->
                 <div class="text-center">
                     <button type="submit" class="btn btn-primary btn-lg">
                         <i class="bi bi-send-check"></i> Отправить запрос
@@ -290,40 +426,76 @@
                 </div>
             </form>
         </div>
-        
-        <div class="status-check-card mt-4 text-center p-4 bg-white rounded shadow">
-            <h5 style="color: var(--kit-green);">
-                <i class="bi bi-hourglass-split"></i> Уже отправили запрос?
-            </h5>
-            <a href="/check-status" class="btn btn-outline-success">
-                <i class="bi bi-search"></i> Проверить статус
-            </a>
+       
+        <!-- Проверка статуса -->
+        <div class="status-check-card">
+            <div class="row align-items-center">
+                <div class="col-md-9">
+                    <h5 class="mb-1" style="color: var(--kit-green);">
+                        <i class="bi bi-hourglass-split"></i> Уже отправили запрос?
+                    </h5>
+                    <p class="mb-0 text-muted">Проверьте статус вашей заявки на выдачу книги</p>
+                </div>
+                <div class="col-md-3 text-end">
+                    <a href="/check-status" class="btn btn-outline-success" style="border-color: var(--kit-green); color: var(--kit-green);">
+                        <i class="bi bi-search"></i> Проверить статус
+                    </a>
+                </div>
+            </div>
         </div>
-        
-        <div id="error-message" class="alert alert-danger mt-3" style="display: none;"></div>
-        <div id="success-message" class="alert alert-success mt-3" style="display: none;"></div>
     </div>
 
     <!-- Модальное окно успеха -->
-    <div class="modal fade" id="successModal" tabindex="-1">
+    <div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header" style="background: linear-gradient(90deg, var(--kit-green) 0%, #5cb85c 100%); color: white;">
-                    <h5 class="modal-title"><i class="bi bi-check-circle-fill"></i> Успешно!</h5>
+                    <h5 class="modal-title">
+                        <i class="bi bi-check-circle-fill"></i> Успешно!
+                    </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body text-center">
-                    <i class="bi bi-journal-check display-1" style="color: var(--kit-green);"></i>
-                    <h4 class="mt-3">Запрос №<span id="requestId"></span> отправлен</h4>
+                    <div class="mb-3">
+                        <i class="bi bi-journal-check display-1" style="color: var(--kit-green);"></i>
+                    </div>
+                    <h4 class="mb-3">Запрос №<span id="requestId" class="text-primary"></span> отправлен</h4>
                     <p class="lead">Ожидайте подтверждения библиотекаря</p>
-                    <div class="alert alert-info">
-                        <strong>Сохраните номер запроса!</strong><br>Он понадобится для проверки статуса
+                   
+                    <div class="alert alert-info" style="background: rgba(76, 175, 80, 0.1); border-color: var(--kit-green);">
+                        <i class="bi bi-info-circle" style="color: var(--kit-green);"></i>
+                        <strong>Сохраните номер запроса!</strong><br>
+                        Он понадобится для проверки статуса
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle"></i> Закрыть
+                    </button>
                     <button type="button" class="btn btn-primary" id="checkStatusBtn">
                         <i class="bi bi-search"></i> Проверить статус
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно ошибок -->
+    <div class="modal fade" id="errorModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-exclamation-triangle-fill"></i> Ошибка
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center" id="errorModalBody">
+                    Произошла ошибка.
+                </div>
+                <div class="modal-footer justify-content-center">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle"></i> Закрыть
                     </button>
                 </div>
             </div>
@@ -335,21 +507,26 @@
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header" style="background: linear-gradient(90deg, var(--kit-orange) 0%, #ff8c00 100%); color: white;">
-                    <h5 class="modal-title"><i class="bi bi-qr-code-scan"></i> Сканирование экземпляров</h5>
+                    <h5 class="modal-title">
+                        <i class="bi bi-qr-code-scan"></i> Сканирование экземпляров
+                    </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" onclick="stopStudentScanner()"></button>
                 </div>
                 <div class="modal-body">
                     <div class="qr-scanner-container">
-                        <video id="qr-student-video" playsinline class="mirrored-video"></video>
-                        <div class="scanner-overlay mirrored-overlay"></div>
+                        <video id="qr-student-video" playsinline></video>
+                        <div class="scanner-overlay"></div>
                     </div>
-                    <p class="text-center mt-3">Сканируйте QR-коды на книгах (нужно ровно указанное количество)</p>
+                    <p class="text-center mt-3">Наведите камеру на QR-коды книг</p>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Основной скрипт -->
     <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
 </body>
 </html>

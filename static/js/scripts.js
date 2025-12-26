@@ -242,30 +242,7 @@ document.addEventListener('DOMContentLoaded', function() {
         studentSuggestions.innerHTML = `<div class="list-group-item list-group-item-warning">${msg}</div>`;
         studentSuggestions.style.display = 'block';
     }
-
-    // Кнопки +/- количества
-    if (quantityInput) {
-        const container = quantityInput.parentNode;
-        const btnGroup = document.createElement('div');
-        btnGroup.className = 'btn-group btn-group-sm mt-2';
-        btnGroup.innerHTML = `
-            <button type="button" class="btn btn-outline-secondary" id="decrease-btn">-1</button>
-            <button type="button" class="btn btn-outline-secondary" id="increase-btn">+1</button>
-        `;
-        container.appendChild(btnGroup);
-
-        document.getElementById('decrease-btn').addEventListener('click', () => {
-            let v = parseInt(quantityInput.value) || 1;
-            if (v > 1) quantityInput.value = v - 1;
-            updateStudentAttached();
-        });
-        document.getElementById('increase-btn').addEventListener('click', () => {
-            let v = parseInt(quantityInput.value) || 1;
-            quantityInput.value = v + 1;
-            updateStudentAttached();
-        });
-    }
-
+    
     // Очистка студента
     if (clearStudentBtn) {
         clearStudentBtn.addEventListener('click', () => {
@@ -275,7 +252,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Отправка формы
+    // === Отправка формы (обновлённая с модальным окном ошибок) ===
     const form = document.getElementById('bookRequestForm');
     if (form) {
         form.addEventListener('submit', function(e) {
@@ -296,10 +273,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const codes = Array.from(studentScannedCodes);
 
             if (codes.length !== quantity) {
-                e.preventDefault();
                 let word = 'экземпляров';
                 if (quantity === 1) word = 'экземпляр';
-                else if ([2,3,4].includes(quantity % 10) && !(quantity % 100 >= 11 && quantity % 100 <= 14)) word = 'экземпляра';
+                else if ([2, 3, 4].includes(quantity % 10) && !(quantity % 100 >= 11 && quantity % 100 <= 14)) word = 'экземпляра';
+
                 showError(`Вы должны прикрепить ровно ${quantity} ${word} (сейчас: ${codes.length})`);
                 return;
             }
@@ -325,11 +302,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     currentGroupIdField.value = '';
                     studentScannedCodes.clear();
                     updateStudentAttached();
+                    // Скрываем возможные открытые модалки ошибок
+                    bootstrap.Modal.getInstance(document.getElementById('errorModal'))?.hide();
                 } else {
-                    showError(res.text || 'Ошибка сервера');
+                    showError(res.text || 'Произошла неизвестная ошибка на сервере');
                 }
             })
-            .catch(err => showError('Ошибка отправки: ' + err.message))
+            .catch(err => {
+                showError('Ошибка отправки запроса: ' + err.message);
+            })
             .finally(() => {
                 submitBtn.textContent = origText;
                 submitBtn.disabled = false;
@@ -338,9 +319,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function showError(msg) {
-        const el = document.getElementById('error-message');
-        el.textContent = msg;
-        el.style.display = 'block';
+        const errorModalBody = document.getElementById('errorModalBody');
+        if (errorModalBody) {
+            errorModalBody.textContent = msg;
+        }
+        const errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
+        errorModal.show();
     }
 
     function showSuccessModal(message) {
@@ -364,4 +348,38 @@ document.addEventListener('DOMContentLoaded', function() {
         const id = el?.dataset.fullNumber || '';
         window.location.href = '/check-status?request_id=' + encodeURIComponent(id);
     });
+
+    // === Кнопки + и - для количества экземпляров ===
+    const decreaseBtn = document.getElementById('decrease-quantity');
+    const increaseBtn = document.getElementById('increase-quantity');
+
+    if (quantityInput && decreaseBtn && increaseBtn) {
+        // Увеличиваем
+        increaseBtn.addEventListener('click', function() {
+            let value = parseInt(quantityInput.value) || 1;
+            quantityInput.value = value + 1;
+            updateStudentAttached(); // Обновляем текст "Прикреплено: X из Y"
+        });
+
+        // Уменьшаем (не ниже 1)
+        decreaseBtn.addEventListener('click', function() {
+            let value = parseInt(quantityInput.value) || 1;
+            if (value > 1) {
+                quantityInput.value = value - 1;
+                updateStudentAttached();
+            }
+        });
+
+        // Если пользователь вручную меняет значение в поле
+        quantityInput.addEventListener('change', function() {
+            let value = parseInt(this.value) || 1;
+            if (value < 1) {
+                this.value = 1;
+            }
+            updateStudentAttached();
+        });
+
+        // При загрузке страницы тоже обновляем счётчик
+        updateStudentAttached();
+    }
 });

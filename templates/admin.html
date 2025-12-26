@@ -132,6 +132,7 @@
             border-color: white;
         }
 
+        /* Стили для новых кнопок фильтров */
         .btn-check + .btn-outline-secondary:hover,
         .btn-check:checked + .btn-outline-secondary {
             background-color: #6c757d;
@@ -164,6 +165,7 @@
             .btn-group .btn, .input-group {
                 margin-bottom: 5px;
             }
+            
             .col-md-6 {
                 margin-bottom: 15px;
             }
@@ -200,6 +202,7 @@
         #qr-video {
             width: 100%;
             height: auto;
+            transform: scaleX(-1); /* Отзеркаливание камеры */
         }
 
         .scanner-overlay {
@@ -211,33 +214,12 @@
             pointer-events: none;
             border: 2px solid rgba(255, 107, 0, 0.5);
             box-shadow: inset 0 0 0 1000px rgba(0, 0, 0, 0.3);
-        }
-
-        .manual-input {
-            margin-top: 1rem;
+            transform: scaleX(-1); /* Отзеркаливание оверлея */
         }
 
         .attached-count {
             margin-top: 1rem;
             font-weight: bold;
-            font-size: 1.1em;
-        }
-
-        .attached-list {
-            margin-top: 1rem;
-            max-height: 150px;
-            overflow-y: auto;
-            padding: 0.5rem;
-            background: #f8f9fa;
-            border-radius: 8px;
-        }
-        /* Зеркальное отражение камеры */
-        .mirrored-video {
-            transform: scaleX(-1);
-        }
-        /* Оверлей тоже должен быть отзеркален, чтобы рамка совпадала */
-        .mirrored-overlay {
-            transform: scaleX(-1);
         }
     </style>
 </head>
@@ -371,7 +353,7 @@
                             <th><i class="bi bi-people"></i> Группа</th>
                             <th><i class="bi bi-book"></i> Книга</th>
                             <th><i class="bi bi-hash"></i> Кол-во</th>
-                            <th><i class="bi bi-123"></i> Экземпляры</th>
+                            <th><i class="bi bi-123"></i> ID экземпляров</th>
                             <th><i class="bi bi-calendar"></i> Дата запроса</th>
                             <th><i class="bi bi-tag"></i> Статус</th>
                             <th><i class="bi bi-gear"></i> Действия</th>
@@ -432,26 +414,28 @@
                                     <button class="btn btn-info btn-sm action-btn" 
                                         data-action="scan" 
                                         data-id="{{ req.id }}"
-                                        title="Привязать экземпляры (QR)">
+                                        title="Сканировать QR коды экземпляров">
                                         <i class="bi bi-qr-code-scan"></i>
                                     </button>
                                     <button class="btn btn-success btn-sm action-btn" 
                                         data-action="confirm" 
                                         data-id="{{ req.id }}"
-                                        title="Подтвердить выдачу">
+                                        title="Подтвердить выдачу"
+                                        style="background: var(--kit-green); border-color: var(--kit-green);">
                                         <i class="bi bi-check-lg"></i>
                                     </button>
                                     <button class="btn btn-danger btn-sm action-btn"
                                         data-action="reject" 
                                         data-id="{{ req.id }}"
-                                        title="Отклонить">
+                                        title="Отклонить запрос">
                                         <i class="bi bi-x-lg"></i>
                                     </button>
                                 {% elif req.status == 'выдано' %}
                                     <button class="btn btn-primary btn-sm action-btn"
                                         data-action="return" 
                                         data-id="{{ req.id }}"
-                                        title="Отметить возврат">
+                                        title="Отметить возврат"
+                                        style="background: var(--kit-orange); border-color: var(--kit-orange);">
                                         <i class="bi bi-arrow-return-left"></i>
                                     </button>
                                 {% else %}
@@ -464,27 +448,34 @@
                 </table>
             </div>
             {% else %}
-            <div class="alert alert-info text-center">
+            <div class="alert alert-info text-center" style="background: rgba(13, 110, 253, 0.1);">
                 <i class="bi bi-info-circle display-4" style="color: var(--kit-orange);"></i>
-                <h4 class="mt-3" style="color: var(--kit-orange);">Запросов нет</h4>
-                <p class="text-muted">Когда студенты оформят заявки, они появятся здесь</p>
+                <h4 class="mt-3" style="color: var(--kit-orange);">Запросов на выдачу книг пока нет</h4>
+                <p class="text-muted">Когда студенты начнут оформлять заявки, они появятся здесь</p>
             </div>
             {% endif %}
         </div>
     </div>
     
-    <!-- Модальное окно подтверждения -->
+    <!-- Модальное окно для подтверждения -->
     <div class="modal fade" id="confirmModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header" style="background: linear-gradient(90deg, var(--kit-orange) 0%, #ff8c00 100%); color: white;">
-                    <h5 class="modal-title"><i class="bi bi-question-circle"></i> Подтверждение</h5>
+                    <h5 class="modal-title">
+                        <i class="bi bi-question-circle"></i> Подтверждение
+                    </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body" id="modalBody"></div>
+                <div class="modal-body" id="modalBody">
+                    <!-- Сюда будет вставляться текст -->
+                </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="bi bi-x-circle"></i> Отмена</button>
-                    <button type="button" class="btn btn-primary" id="modalConfirmBtn" style="background: var(--kit-green); border-color: var(--kit-green);">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle"></i> Отмена
+                    </button>
+                    <button type="button" class="btn btn-primary" id="modalConfirmBtn" 
+                            style="background: var(--kit-green); border-color: var(--kit-green);">
                         <i class="bi bi-check-lg"></i> Подтвердить
                     </button>
                 </div>
@@ -492,33 +483,35 @@
         </div>
     </div>
 
-    <!-- Модальное окно QR-сканера для привязки экземпляров -->
+    <!-- Модальное окно для QR-сканера -->
     <div class="modal fade" id="qrScannerModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header" style="background: linear-gradient(90deg, var(--kit-orange) 0%, #ff8c00 100%); color: white;">
-                    <h5 class="modal-title"><i class="bi bi-qr-code-scan"></i> Привязка экземпляров</h5>
+                    <h5 class="modal-title">
+                        <i class="bi bi-qr-code-scan"></i> Сканер QR-кодов экземпляров
+                    </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" onclick="stopScanner()"></button>
                 </div>
                 <div class="modal-body">
                     <div class="qr-scanner-container">
-                        <video id="qr-video" playsinline class="mirrored-video"></video>
-                        <div class="scanner-overlay mirrored-overlay"></div>
+                        <video id="qr-video" playsinline></video>
+                        <div class="scanner-overlay"></div>
                     </div>
-                    <p class="text-center mt-3">Сканируйте QR-коды на книгах (можно несколько подряд)</p>
+                    <p class="text-center mt-3">Наведите камеру на QR-коды книг. Можно сканировать несколько подряд.</p>
                     <div class="manual-input">
-                        <label for="manualCopyCodes">Ручной ввод кодов (по одному на строку):</label>
-                        <textarea id="manualCopyCodes" class="form-control" rows="5"></textarea>
+                        <label for="manualCopyIds">Ручной ввод ID (каждый в новой строке):</label>
+                        <textarea id="manualCopyIds" class="form-control" rows="5"></textarea>
                     </div>
-                    <div class="attached-count" id="attachedCount">Прикреплено: 0 из {{ request_quantity }}</div>
+                    <div class="attached-count" id="attachedCount">Прикреплено экземпляров: 0</div>
                     <div class="attached-list border mt-2 p-2" id="attachedList"></div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="stopScanner()">
                         <i class="bi bi-x-circle"></i> Отмена
                     </button>
-                    <button type="button" class="btn btn-primary" id="saveCopiesBtn">
-                        <i class="bi bi-save"></i> Привязать
+                    <button type="button" class="btn btn-primary" id="saveCopyIdsBtn">
+                        <i class="bi bi-save"></i> Сохранить ID
                     </button>
                 </div>
             </div>
@@ -529,6 +522,7 @@
     <script>
         console.log('=== АДМИН-ПАНЕЛЬ ЗАГРУЖЕНА ===');
         
+        // Модальное окно подтверждения
         const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
         const modalBody = document.getElementById('modalBody');
         const modalConfirmBtn = document.getElementById('modalConfirmBtn');
@@ -536,49 +530,67 @@
         let currentRequestId = null;
         let currentAction = '';
         
-        // QR-сканер
-        const qrScannerModal = new bootstrap.Modal(document.getElementById('qrScannerModal'));
-        let videoElement = document.getElementById('qr-video');
-        let manualCopyCodes = document.getElementById('manualCopyCodes');
-        let attachedCount = document.getElementById('attachedCount');
-        let attachedList = document.getElementById('attachedList');
-        let scannedCodes = new Set();
-        let stream = null;
-        let scanningInterval = null;
-        let requestQuantity = 0;
-
+        // === QR-сканер для админа ===
+        let adminStream = null;
+        let adminScanningInterval = null;
+        let adminScannedCodes = new Set();
+        let currentScanRequestId = null;
+        let currentScanQuantity = 0;
+        
+        // Основной обработчик кликов (включает и действия, и сканер)
         document.addEventListener('click', function(event) {
             let button = event.target;
-            if (button.tagName === 'I') button = button.closest('button');
-            
-            if (button && button.hasAttribute('data-action')) {
-                currentAction = button.getAttribute('data-action');
-                currentRequestId = button.getAttribute('data-id');
-                
-                if (currentAction === 'scan') {
-                    requestQuantity = parseInt(button.closest('tr').querySelector('td:nth-child(5) span').textContent);
-                    attachedCount.textContent = `Прикреплено: 0 из ${requestQuantity}`;
-                    scannedCodes.clear();
-                    manualCopyCodes.value = '';
-                    attachedList.innerHTML = '';
-                    qrScannerModal.show();
-                    startScanner();
-                } else if (currentAction === 'confirm') {
-                    modalBody.innerHTML = '<div class="text-center"><i class="bi bi-check-circle display-4" style="color: var(--kit-green);"></i><h4 class="mt-3">Подтвердить выдачу?</h4><p class="text-muted">Книги будут выданы студенту</p></div>';
-                    modalConfirmBtn.innerHTML = '<i class="bi bi-check-lg"></i> Подтвердить';
-                    confirmModal.show();
-                } else if (currentAction === 'return') {
-                    modalBody.innerHTML = '<div class="text-center"><i class="bi bi-arrow-return-left display-4" style="color: var(--kit-orange);"></i><h4 class="mt-3">Отметить возврат?</h4><p class="text-muted">Книги вернутся в фонд</p></div>';
-                    modalConfirmBtn.innerHTML = '<i class="bi bi-arrow-return-left"></i> Отметить';
-                    confirmModal.show();
-                } else if (currentAction === 'reject') {
-                    modalBody.innerHTML = '<div class="text-center"><i class="bi bi-x-circle display-4 text-danger"></i><h4 class="mt-3">Отклонить запрос?</h4><p class="text-muted">Запрос будет удалён</p></div>';
-                    modalConfirmBtn.innerHTML = '<i class="bi bi-x-lg"></i> Отклонить';
-                    confirmModal.show();
-                }
+            if (button.tagName === 'I') {
+                button = button.closest('button');
             }
+            
+            if (!button) return;
+            
+            const action = button.getAttribute('data-action');
+            const reqId = button.getAttribute('data-id');
+            
+            if (!action || !reqId) return;
+            
+            currentRequestId = reqId;
+            
+            if (action === 'scan') {
+                // Получаем количество из строки таблицы
+                const row = button.closest('tr');
+                const quantityCell = row.querySelector('td:nth-child(5) .badge');
+                currentScanQuantity = parseInt(quantityCell.textContent.trim());
+                
+                // Сбрасываем сканер
+                adminScannedCodes.clear();
+                document.getElementById('manualCopyIds').value = '';
+                document.getElementById('attachedCount').textContent = `Прикреплено экземпляров: 0 из ${currentScanQuantity}`;
+                document.getElementById('attachedList').innerHTML = '';
+                
+                currentScanRequestId = reqId;
+                
+                const qrModal = new bootstrap.Modal(document.getElementById('qrScannerModal'));
+                qrModal.show();
+                startAdminScanner();
+                return;
+            }
+            
+            // Остальные действия (confirm, return, reject)
+            currentAction = action;
+            
+            if (action === 'confirm') {
+                modalBody.innerHTML = '<div class="text-center"><i class="bi bi-check-circle display-4" style="color: var(--kit-green);"></i><h4 class="mt-3">Подтвердить выдачу книги?</h4><p class="text-muted">Книга будет помечена как выданная студенту</p></div>';
+                modalConfirmBtn.innerHTML = '<i class="bi bi-check-lg"></i> Подтвердить выдачу';
+            } else if (action === 'return') {
+                modalBody.innerHTML = '<div class="text-center"><i class="bi bi-arrow-return-left display-4" style="color: var(--kit-orange);"></i><h4 class="mt-3">Отметить книгу как возвращенную?</h4><p class="text-muted">Книга будет возвращена в библиотечный фонд</p></div>';
+                modalConfirmBtn.innerHTML = '<i class="bi bi-arrow-return-left"></i> Отметить возврат';
+            } else if (action === 'reject') {
+                modalBody.innerHTML = '<div class="text-center"><i class="bi bi-x-circle display-4 text-danger"></i><h4 class="mt-3">Отклонить запрос на выдачу?</h4><p class="text-muted">Запрос будет отклонен и удален из системы</p></div>';
+                modalConfirmBtn.innerHTML = '<i class="bi bi-x-lg"></i> Отклонить';
+            }
+            
+            confirmModal.show();
         });
         
+        // Подтверждение действий
         modalConfirmBtn.addEventListener('click', function() {
             if (!currentRequestId || !currentAction) return;
             
@@ -590,90 +602,138 @@
             fetch(url, { method: 'POST' })
                 .then(r => r.json())
                 .then(data => {
-                    if (data.success) location.reload();
-                    else alert('Ошибка: ' + data.error);
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('Ошибка: ' + data.error);
+                    }
                 })
                 .finally(() => confirmModal.hide());
         });
-
-        function startScanner() {
+        
+        // === Функции QR-сканера ===
+        function startAdminScanner() {
             navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-                .then(s => {
-                    stream = s;
-                    videoElement.srcObject = stream;
-                    videoElement.play();
+                .then(stream => {
+                    adminStream = stream;
+                    const video = document.getElementById('qr-video');
+                    video.srcObject = stream;
+                    video.play();
                     
                     const canvas = document.createElement('canvas');
                     const ctx = canvas.getContext('2d');
                     
-                    scanningInterval = setInterval(() => {
-                        if (videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
-                            canvas.height = videoElement.videoHeight;
-                            canvas.width = videoElement.videoWidth;
-                            ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+                    adminScanningInterval = setInterval(() => {
+                        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                            canvas.height = video.videoHeight;
+                            canvas.width = video.videoWidth;
+                            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
                             const code = jsQR(imageData.data, imageData.width, imageData.height);
                             
                             if (code) {
                                 const codeVal = code.data.trim();
-                                if (!scannedCodes.has(codeVal)) {
-                                    scannedCodes.add(codeVal);
-                                    manualCopyCodes.value += codeVal + '\n';
-                                    updateAttached();
+                                if (!adminScannedCodes.has(codeVal)) {
+                                    adminScannedCodes.add(codeVal);
+                                    const textarea = document.getElementById('manualCopyIds');
+                                    textarea.value += (textarea.value ? '\n' : '') + codeVal;
+                                    updateAdminAttached();
                                 }
                             }
                         }
                     }, 300);
                 })
-                .catch(err => alert('Ошибка камеры: ' + err));
+                .catch(err => alert('Ошибка доступа к камере: ' + err));
         }
-
-        function stopScanner() {
-            if (stream) stream.getTracks().forEach(t => t.stop());
-            if (scanningInterval) clearInterval(scanningInterval);
-            stream = null;
-            scanningInterval = null;
-            videoElement.srcObject = null;
+        
+        window.stopScanner = function() {  // Делаем глобальной, чтобы работала в onclick
+            if (adminStream) {
+                adminStream.getTracks().forEach(t => t.stop());
+                adminStream = null;
+            }
+            if (adminScanningInterval) {
+                clearInterval(adminScanningInterval);
+                adminScanningInterval = null;
+            }
+            const video = document.getElementById('qr-video');
+            if (video) video.srcObject = null;
+        };
+        
+        function updateAdminAttached() {
+            const codes = Array.from(adminScannedCodes);
+            document.getElementById('attachedCount').textContent = `Прикреплено экземпляров: ${codes.length} из ${currentScanQuantity}`;
+            document.getElementById('attachedList').innerHTML = codes.map(c => `<div class="badge bg-success me-1 mb-1">${c}</div>`).join('');
         }
-
-        function updateAttached() {
-            const codes = Array.from(scannedCodes);
-            attachedCount.textContent = `Прикреплено: ${codes.length} из ${requestQuantity}`;
-            attachedList.innerHTML = codes.map(c => `<div class="badge bg-success me-1">${c}</div>`).join('');
-        }
-
-        document.getElementById('saveCopiesBtn').addEventListener('click', function() {
-            const manual = manualCopyCodes.value.trim().split('\n').filter(c => c.trim());
-            const allCodes = [...new Set([...scannedCodes, ...manual])];
-            
-            if (allCodes.length !== requestQuantity) {
-                alert(`Нужно привязать ровно ${requestQuantity} экземпляров`);
+        
+        // Ручной ввод
+        document.getElementById('manualCopyIds').addEventListener('input', function() {
+            const lines = this.value.trim().split('\n').map(l => l.trim()).filter(l => l);
+            adminScannedCodes = new Set(lines);
+            updateAdminAttached();
+        });
+        
+        // Сохранение кодов
+        document.getElementById('saveCopyIdsBtn').addEventListener('click', function() {
+            const codes = Array.from(adminScannedCodes);
+            if (codes.length !== currentScanQuantity) {
+                alert(`Нужно прикрепить ровно ${currentScanQuantity} экземпляров (сейчас: ${codes.length})`);
                 return;
             }
             
-            fetch(`/admin/assign-copy-ids/${currentRequestId}`, {
+            fetch(`/admin/assign-copy-ids/${currentScanRequestId}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ copy_codes: allCodes.join(',') })
+                body: JSON.stringify({ copy_codes: codes.join(',') })
             })
             .then(r => r.json())
             .then(data => {
-                if (data.success) location.reload();
-                else alert('Ошибка: ' + data.error);
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Ошибка: ' + data.error);
+                }
             });
-            
-            qrScannerModal.hide();
-            stopScanner();
         });
-
-        // Фильтры (оставляем как было)
+        
+        // Твои фильтры (оставляем как есть)
         let currentParams = new URLSearchParams(window.location.search);
-        function applyStatusFilter(status) { currentParams.set('status', status); window.location.href = `/admin/filter?${currentParams.toString()}`; }
-        function applyDateFilter(dateType) { currentParams.set('date', dateType); if (dateType !== 'custom') currentParams.delete('custom_date'); window.location.href = `/admin/filter?${currentParams.toString()}`; }
-        function applyCustomDate() { const v = document.getElementById('customDateInput').value; if (v) { currentParams.set('date', 'custom'); currentParams.set('custom_date', v); window.location.href = `/admin/filter?${currentParams.toString()}`; } }
-        function applySearch() { const v = document.getElementById('searchInput').value.trim(); if (v) currentParams.set('search', v); else currentParams.delete('search'); window.location.href = `/admin/filter?${currentParams.toString()}`; }
-        function handleSearchEnter(e) { if (e.key === 'Enter') applySearch(); }
-        function resetAllFilters() { window.location.href = '/admin'; }
+        
+        function applyStatusFilter(status) {
+            currentParams.set('status', status);
+            window.location.href = `/admin/filter?${currentParams.toString()}`;
+        }
+        
+        function applyDateFilter(dateType) {
+            currentParams.set('date', dateType);
+            if (dateType !== 'custom') currentParams.delete('custom_date');
+            window.location.href = `/admin/filter?${currentParams.toString()}`;
+        }
+        
+        function applyCustomDate() {
+            const v = document.getElementById('customDateInput').value;
+            if (v) {
+                currentParams.set('date', 'custom');
+                currentParams.set('custom_date', v);
+                window.location.href = `/admin/filter?${currentParams.toString()}`;
+            } else {
+                alert('Выберите дату');
+            }
+        }
+        
+        function applySearch() {
+            const v = document.getElementById('searchInput').value.trim();
+            if (v) currentParams.set('search', v);
+            else currentParams.delete('search');
+            window.location.href = `/admin/filter?${currentParams.toString()}`;
+        }
+        
+        function handleSearchEnter(e) {
+            if (e.key === 'Enter') applySearch();
+        }
+        
+        function resetAllFilters() {
+            window.location.href = '/admin';
+        }
     </script>
 </body>
 </html>
