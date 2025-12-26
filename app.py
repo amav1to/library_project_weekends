@@ -21,10 +21,6 @@ app.secret_key = 'ваш-секретный-ключ-для-сессий-12345'
 
 db.init_app(app)
 
-with app.app_context():
-    db.create_all()
-    print("База данных готова!")
-
 @app.route('/')
 def index():
     return render_template('index.html')
