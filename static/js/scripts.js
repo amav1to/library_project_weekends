@@ -1,5 +1,3 @@
-// static/js/scripts.js
-
 document.addEventListener('DOMContentLoaded', function() {
     // Элементы формы
     const groupSelect = document.getElementById('group');
@@ -9,22 +7,128 @@ document.addEventListener('DOMContentLoaded', function() {
     const currentGroupIdField = document.getElementById('current_group_id');
     const studentSuggestions = document.getElementById('student-suggestions');
     const quantityInput = document.getElementById('quantity');
-    
-    // 1. Загружаем группы при загрузке страницы
+    const clearStudentBtn = document.getElementById('clear-student');
+
+    // Переменные для сканера экземпляров у студента
+    let studentStream = null;
+    let studentScanningInterval = null;
+    let studentScannedCodes = new Set();
+
+    // === Сканер экземпляров для студента ===
+    window.openStudentScanner = function() {
+        const quantity = parseInt(quantityInput.value) || 1;
+        document.getElementById('studentAttachedCount').textContent = `Прикреплено экземпляров: 0 из ${quantity}`;
+        studentScannedCodes.clear();
+        document.getElementById('studentAttachedList').innerHTML = '';
+        document.getElementById('manualStudentCodes').value = '';
+
+        const modal = new bootstrap.Modal(document.getElementById('qrStudentScannerModal'));
+        modal.show();
+        startStudentScanner();
+    };
+
+    function startStudentScanner() {
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+            .then(stream => {
+                studentStream = stream;
+                const video = document.getElementById('qr-student-video');
+                video.srcObject = stream;
+                video.play();
+
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+
+                studentScanningInterval = setInterval(() => {
+                    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                        canvas.height = video.videoHeight;
+                        canvas.width = video.videoWidth;
+                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+                        if (code) {
+                            const codeVal = code.data.trim();
+                            if (!studentScannedCodes.has(codeVal)) {
+                                studentScannedCodes.add(codeVal);
+                                const textarea = document.getElementById('manualStudentCodes');
+                                textarea.value += (textarea.value ? '\n' : '') + codeVal;
+                                updateStudentAttached();
+                            }
+                        }
+                    }
+                }, 300);
+            })
+            .catch(err => {
+                console.error('Ошибка камеры:', err);
+                alert('Не удалось получить доступ к камере. Проверьте разрешения.');
+            });
+    }
+
+    window.stopStudentScanner = function() {
+        if (studentStream) {
+            studentStream.getTracks().forEach(t => t.stop());
+            studentStream = null;
+        }
+        if (studentScanningInterval) {
+            clearInterval(studentScanningInterval);
+            studentScanningInterval = null;
+        }
+        const video = document.getElementById('qr-student-video');
+        if (video) video.srcObject = null;
+    }
+
+    function updateStudentAttached() {
+        const quantity = parseInt(quantityInput.value) || 1;
+        const codes = Array.from(studentScannedCodes);
+        document.getElementById('studentAttachedCount').textContent = `Прикреплено экземпляров: ${codes.length} из ${quantity}`;
+        document.getElementById('studentAttachedList').innerHTML = codes.map(c => `<div class="badge bg-success me-1 mb-1">${c}</div>`).join('');
+    }
+
+    // Синхронизация textarea
+    const manualCodesTextarea = document.getElementById('manualStudentCodes');
+    if (manualCodesTextarea) {
+        manualCodesTextarea.addEventListener('input', function() {
+            const lines = this.value.trim().split('\n').map(l => l.trim()).filter(l => l);
+            studentScannedCodes = new Set(lines);
+            updateStudentAttached();
+        });
+    }
+
+    // Обновление счётчика при изменении количества
+    if (quantityInput) {
+        quantityInput.addEventListener('change', updateStudentAttached);
+    }
+
+    // 1. Загрузка групп
+    function loadGroups() {
+        fetch('/get-groups')
+            .then(r => r.json())
+            .then(groups => {
+                groupSelect.innerHTML = '<option value="">-- Выберите группу --</option>';
+                groups.forEach(g => {
+                    const opt = document.createElement('option');
+                    opt.value = g.id;
+                    opt.textContent = g.name;
+                    groupSelect.appendChild(opt);
+                });
+            })
+            .catch(err => {
+                console.error(err);
+                groupSelect.innerHTML = '<option value="">Ошибка загрузки групп</option>';
+            });
+    }
     loadGroups();
-    
-    // 2. При выборе группы
+
+    // 2. Выбор группы
     if (groupSelect) {
         groupSelect.addEventListener('change', function() {
             const groupId = this.value;
-            currentGroupIdField.value = groupId; // Сохраняем ID группы
-            
+            currentGroupIdField.value = groupId;
             if (groupId) {
                 loadBooks(groupId);
-                studentInput.value = ''; // Очищаем поле
-                studentIdField.value = ''; // Очищаем скрытое поле
+                studentInput.value = '';
+                studentIdField.value = '';
             } else {
-                // Если группа не выбрана
                 bookSelect.innerHTML = '<option value="">-- Сначала выберите группу --</option>';
                 studentSuggestions.style.display = 'none';
                 studentSuggestions.innerHTML = '';
@@ -32,393 +136,232 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
-    // 3. Поиск студентов при вводе текста (одна буква и более)
+
+    // 3. Загрузка книг
+    function loadBooks(groupId) {
+        fetch(`/get-books/${groupId}`)
+            .then(r => r.json())
+            .then(books => {
+                bookSelect.innerHTML = '<option value="">-- Выберите книгу --</option>';
+                if (books.length === 0) {
+                    bookSelect.innerHTML += '<option value="">Нет доступных книг</option>';
+                    return;
+                }
+                books.forEach(b => {
+                    const opt = document.createElement('option');
+                    opt.value = b.id;
+                    opt.textContent = `${b.name} (доступно: ${b.available})`;
+                    bookSelect.appendChild(opt);
+                });
+
+                // Ограничение количества
+                bookSelect.addEventListener('change', function() {
+                    const match = this.selectedOptions[0].text.match(/доступно:\s*(\d+)/);
+                    if (match && quantityInput) {
+                        const max = parseInt(match[1]);
+                        quantityInput.max = max;
+                        if (parseInt(quantityInput.value) > max) quantityInput.value = max;
+                        updateStudentAttached();
+                    }
+                });
+            })
+            .catch(err => {
+                console.error(err);
+                bookSelect.innerHTML = '<option value="">Ошибка загрузки книг</option>';
+            });
+    }
+
+    // 4. Поиск студентов
     if (studentInput) {
-        let searchTimeout;
-        
+        let timeout;
         studentInput.addEventListener('input', function() {
-            clearTimeout(searchTimeout);
+            clearTimeout(timeout);
             const query = this.value.trim();
             const groupId = currentGroupIdField.value;
-            
-            // Если группа не выбрана - показываем сообщение
             if (!groupId) {
                 showMessage('Сначала выберите группу');
                 return;
             }
-            
-            // Если поле пустое - показываем всех студентов группы
             if (query === '') {
                 loadAllStudents(groupId);
                 return;
             }
-            
-            // Ждем 200мс после окончания ввода
-            searchTimeout = setTimeout(() => {
-                searchStudents(query, groupId);
-            }, 200);
+            timeout = setTimeout(() => searchStudents(query, groupId), 200);
         });
-        
-        // Скрыть подсказки при клике вне поля
-        document.addEventListener('click', function(e) {
+
+        document.addEventListener('click', e => {
             if (!studentInput.contains(e.target) && !studentSuggestions.contains(e.target)) {
                 studentSuggestions.style.display = 'none';
             }
         });
-    }
-    
-    // Показывать студентов при клике на поле (ВСЕГДА показываем список)
-    if (studentInput) {
-        studentInput.addEventListener('click', function() {
+
+        studentInput.addEventListener('click', () => {
             const groupId = currentGroupIdField.value;
-            
-            if (!groupId) {
-                showMessage('Сначала выберите группу');
-                return;
-            }
-            
-            // ВСЕГДА показываем всех студентов при клике
-            loadAllStudents(groupId);
+            if (groupId) loadAllStudents(groupId);
         });
     }
 
+    function loadAllStudents(groupId) {
+        fetch(`/get-students/${groupId}`)
+            .then(r => r.json())
+            .then(students => updateStudentSuggestions(students, 'Студенты группы:'))
+            .catch(() => showMessage('Ошибка загрузки студентов'));
+    }
 
-    // 4. Кнопки для количества
+    function searchStudents(query, groupId) {
+        fetch(`/search-students?q=${encodeURIComponent(query)}&group_id=${groupId}`)
+            .then(r => r.json())
+            .then(students => updateStudentSuggestions(students, `Результаты поиска "${query}":`))
+            .catch(() => showMessage('Ошибка поиска'));
+    }
+
+    function updateStudentSuggestions(students, title) {
+        studentSuggestions.innerHTML = '';
+        if (students.length === 0) {
+            studentSuggestions.innerHTML = '<div class="list-group-item text-muted">Студенты не найдены</div>';
+        } else {
+            studentSuggestions.innerHTML += `<div class="list-group-item list-group-item-light">${title}</div>`;
+            students.forEach(s => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'list-group-item list-group-item-action';
+                btn.textContent = s.name;
+                btn.dataset.studentId = s.id;
+                btn.addEventListener('click', () => {
+                    studentInput.value = s.name;
+                    studentIdField.value = s.id;
+                    studentSuggestions.style.display = 'none';
+                });
+                studentSuggestions.appendChild(btn);
+            });
+        }
+        studentSuggestions.style.display = 'block';
+    }
+
+    function showMessage(msg) {
+        studentSuggestions.innerHTML = `<div class="list-group-item list-group-item-warning">${msg}</div>`;
+        studentSuggestions.style.display = 'block';
+    }
+
+    // Кнопки +/- количества
     if (quantityInput) {
-        const quantityContainer = quantityInput.parentNode;
-        
-        // Создаем кнопки
-        const buttonGroup = document.createElement('div');
-        buttonGroup.className = 'btn-group btn-group-sm mt-2';
-        buttonGroup.innerHTML = `
+        const container = quantityInput.parentNode;
+        const btnGroup = document.createElement('div');
+        btnGroup.className = 'btn-group btn-group-sm mt-2';
+        btnGroup.innerHTML = `
             <button type="button" class="btn btn-outline-secondary" id="decrease-btn">-1</button>
             <button type="button" class="btn btn-outline-secondary" id="increase-btn">+1</button>
         `;
-        
-        quantityContainer.appendChild(buttonGroup);
-        
-        // Обработчики кнопок
-        document.getElementById('decrease-btn').addEventListener('click', function() {
-            let value = parseInt(quantityInput.value) || 1;
-            if (value > 1) {
-                quantityInput.value = value - 1;
-            }
+        container.appendChild(btnGroup);
+
+        document.getElementById('decrease-btn').addEventListener('click', () => {
+            let v = parseInt(quantityInput.value) || 1;
+            if (v > 1) quantityInput.value = v - 1;
+            updateStudentAttached();
         });
-        
-        document.getElementById('increase-btn').addEventListener('click', function() {
-            let value = parseInt(quantityInput.value) || 1;
-            quantityInput.value = value + 1;
+        document.getElementById('increase-btn').addEventListener('click', () => {
+            let v = parseInt(quantityInput.value) || 1;
+            quantityInput.value = v + 1;
+            updateStudentAttached();
         });
     }
-    
-    // Функция загрузки групп
-    function loadGroups() {
-        fetch('/get-groups')
-            .then(response => response.json())
-            .then(groups => {
-                groupSelect.innerHTML = '<option value="">-- Выберите группу --</option>';
-                
-                groups.forEach(group => {
-                    const option = document.createElement('option');
-                    option.value = group.id;
-                    option.textContent = group.name;
-                    groupSelect.appendChild(option);
-                });
-            })
-            .catch(error => {
-                console.error('Ошибка загрузки групп:', error);
-                groupSelect.innerHTML = '<option value="">Ошибка загрузки групп</option>';
-            });
-    }
-    
-    // Функция загрузки книг для группы
-    function loadBooks(groupId) {
-        fetch(`/get-books/${groupId}`)
-            .then(response => response.json())
-            .then(books => {
-                bookSelect.innerHTML = '<option value="">-- Выберите книгу --</option>';
-                
-                if (books.length === 0) {
-                    const option = document.createElement('option');
-                    option.value = "";
-                    option.textContent = "Нет доступных книг для вашей группы";
-                    bookSelect.appendChild(option);
-                    return;
-                }
-                
-                books.forEach(book => {
-                    const option = document.createElement('option');
-                    option.value = book.id;
-                    // Формируем строку с диапазоном ID экземпляров,
-                    // например: "ID: 105(01-25)"
-                    let copiesInfo = '';
-                    if (book.copy_start && book.copy_end) {
-                        const startStr = String(book.copy_start).padStart(2, '0');
-                        const endStr = String(book.copy_end).padStart(2, '0');
-                        const rangeStr = (book.copy_start === book.copy_end)
-                            ? `${startStr}`
-                            : `${startStr}-${endStr}`;
-                        // Код книги = её ID в базе (можно заменить на отдельное поле, если нужно)
-                        copiesInfo = ` | ID: ${book.id}(${rangeStr})`;
-                    }
 
-                    option.textContent = `${book.name} (доступно: ${book.available})${copiesInfo}`;
-                    bookSelect.appendChild(option);
-                });
-                
-                // === ДОБАВЛЕНО: Обновление количества при выборе книги ===
-                // Удаляем старый обработчик, если был
-                bookSelect.onchange = null;
-                
-                // Добавляем новый обработчик
-                bookSelect.addEventListener('change', function() {
-                    const selectedOption = this.options[this.selectedIndex];
-                    
-                    // Обновляем максимальное значение в поле количества
-                    if (selectedOption.value) {
-                        // Парсим доступное количество из текста опции
-                        const match = selectedOption.textContent.match(/доступно:\s*(\d+)/);
-                        if (match && quantityInput) {
-                            const maxAvailable = parseInt(match[1]);
-                            quantityInput.max = maxAvailable;
-                            
-                            // Если текущее количество больше доступного, уменьшаем его
-                            const currentQuantity = parseInt(quantityInput.value) || 1;
-                            if (currentQuantity > maxAvailable) {
-                                quantityInput.value = maxAvailable;
-                            }
-                        }
-                    }
-                });
-                // === КОНЕЦ ДОБАВЛЕНИЯ ===
-                
-            })
-            .catch(error => {
-                console.error('Ошибка загрузки книг:', error);
-                bookSelect.innerHTML = '<option value="">Ошибка загрузки книг</option>';
-            });
-    }
-    
-    // Функция загрузки ВСЕХ студентов группы
-    function loadAllStudents(groupId) {
-        if (!groupId) return;
-        
-        fetch(`/get-students/${groupId}`)
-            .then(response => response.json())
-            .then(students => {
-                updateStudentSuggestions(students, 'Студенты группы:');
-            })
-            .catch(error => {
-                console.error('Ошибка загрузки студентов:', error);
-                showMessage('Ошибка загрузки студентов');
-            });
-    }
-    
-    // Функция поиска студентов
-    function searchStudents(query, groupId) {
-        if (!groupId) {
-            showMessage('Сначала выберите группу');
-            return;
-        }
-        
-        fetch(`/search-students?q=${encodeURIComponent(query)}&group_id=${groupId}`)
-            .then(response => response.json())
-            .then(students => {
-                updateStudentSuggestions(students, `Результаты поиска "${query}":`);
-            })
-            .catch(error => {
-                console.error('Ошибка поиска студентов:', error);
-                showMessage('Ошибка поиска');
-            });
-    }
-    
-    // Общая функция обновления списка студентов
-    function updateStudentSuggestions(students, title) {
-        studentSuggestions.innerHTML = '';
-        
-        if (students.length === 0) {
-            const item = document.createElement('div');
-            item.className = 'list-group-item text-muted';
-            item.textContent = 'Студенты не найдены';
-            studentSuggestions.appendChild(item);
-        } else {
-            // Добавляем заголовок
-            const titleItem = document.createElement('div');
-            titleItem.className = 'list-group-item list-group-item-light';
-            titleItem.textContent = title;
-            studentSuggestions.appendChild(titleItem);
-            
-            // Добавляем студентов
-            students.forEach(student => {
-                const item = document.createElement('button');
-                item.type = 'button';
-                item.className = 'list-group-item list-group-item-action';
-                item.textContent = student.name;
-                
-                item.addEventListener('click', function() {
-                    studentInput.value = student.name;
-                    studentIdField.value = student.id;
-                    item.dataset.studentId = student.id; // ← ДОБАВИТЬ ЭТУ СТРОКУ
-                    studentSuggestions.style.display = 'none';
-                });
-                
-                studentSuggestions.appendChild(item);
-            });
-        }
-        
-        studentSuggestions.style.display = 'block';
-    }
-    
-    // Функция показа сообщения
-    function showMessage(message) {
-        studentSuggestions.innerHTML = '';
-        const item = document.createElement('div');
-        item.className = 'list-group-item list-group-item-warning';
-        item.textContent = message;
-        studentSuggestions.appendChild(item);
-        studentSuggestions.style.display = 'block';
+    // Очистка студента
+    if (clearStudentBtn) {
+        clearStudentBtn.addEventListener('click', () => {
+            studentInput.value = '';
+            studentIdField.value = '';
+            studentSuggestions.style.display = 'none';
+        });
     }
 
-    // Обработка отправки формы
-    const form = document.querySelector('form');
+    // Отправка формы
+    const form = document.getElementById('bookRequestForm');
     if (form) {
         form.addEventListener('submit', function(e) {
             e.preventDefault();
-            
-            // Проверяем, введено ли ФИО
-            // Проверяем, введено ли ФИО
-            const studentName = studentInput.value.trim();
-            if (!studentName) {
-                document.getElementById('error-message').textContent = 'Ошибка: Введите ФИО студента';
-                document.getElementById('error-message').style.display = 'block';
+
+            // Проверка студента
+            if (!studentInput.value.trim()) {
+                showError('Введите ФИО студента');
+                return;
+            }
+            if (!studentIdField.value) {
+                showError('Выберите студента из списка');
                 return;
             }
 
-            // Если студент выбран из списка - у него уже есть ID
-            // Если введен вручную - нужно найти его ID
-            if (!studentIdField.value) {
-                // Ищем студента по введенному имени
-                const groupId = currentGroupIdField.value;
-                if (!groupId) {
-                    document.getElementById('error-message').textContent = 'Ошибка: Сначала выберите группу';
-                    document.getElementById('error-message').style.display = 'block';
-                    return;
-                }
-                
-                // Ищем студента в уже загруженном списке
-                const studentItems = studentSuggestions.querySelectorAll('.list-group-item-action');
-                let foundStudentId = null;
-                
-                studentItems.forEach(item => {
-                    if (item.textContent === studentName) {
-                        // Нашли совпадение в списке
-                        const studentId = item.dataset.studentId;
-                        if (studentId) {
-                            foundStudentId = studentId;
-                        }
-                    }
-                });
-                
-                if (foundStudentId) {
-                    studentIdField.value = foundStudentId;
-                } else {
-                    document.getElementById('error-message').textContent = 'Ошибка: Студент не найден. Выберите из списка или проверьте ФИО';
-                    document.getElementById('error-message').style.display = 'block';
-                    return;
-                }
+            // Проверка экземпляров
+            const quantity = parseInt(quantityInput.value) || 1;
+            const codes = Array.from(studentScannedCodes);
+
+            if (codes.length !== quantity) {
+                e.preventDefault();
+                let word = 'экземпляров';
+                if (quantity === 1) word = 'экземпляр';
+                else if ([2,3,4].includes(quantity % 10) && !(quantity % 100 >= 11 && quantity % 100 <= 14)) word = 'экземпляра';
+                showError(`Вы должны прикрепить ровно ${quantity} ${word} (сейчас: ${codes.length})`);
+                return;
             }
-            // Показываем индикатор загрузки
+
+            // Заполняем скрытое поле
+            document.getElementById('copy_codes_hidden').value = codes.join(',');
+
             const submitBtn = form.querySelector('button[type="submit"]');
-            const originalText = submitBtn.textContent;
+            const origText = submitBtn.textContent;
             submitBtn.textContent = 'Отправка...';
             submitBtn.disabled = true;
-            
-            // Скрываем предыдущие сообщения
-            document.getElementById('error-message').style.display = 'none';
-            document.getElementById('success-message').style.display = 'none';
-            
-            // Отправляем форму через Fetch API
+
             fetch('/request-book', {
                 method: 'POST',
                 body: new FormData(form)
             })
-            .then(response => {
-                // Получаем и текст, и статус ответа
-                return response.text().then(text => {
-                    return { ok: response.ok, status: response.status, text: text };
-                });
-            })
-            .then(result => {
-                // Проверяем статус ответа
-                if (result.ok) {
-                    // Показываем модальное окно с номером запроса
-                    showSuccessModal(result.text);
-                    
-                    // Очищаем форму после успешной отправки
+            .then(r => r.text().then(text => ({ ok: r.ok, text })))
+            .then(res => {
+                if (res.ok) {
+                    showSuccessModal(res.text);
                     form.reset();
                     studentIdField.value = '';
                     currentGroupIdField.value = '';
-                    studentSuggestions.innerHTML = '';
-                    studentSuggestions.style.display = 'none';
+                    studentScannedCodes.clear();
+                    updateStudentAttached();
                 } else {
-                    // Показываем ошибку от сервера
-                    document.getElementById('error-message').textContent = result.text || `Ошибка ${result.status}`;
-                    document.getElementById('error-message').style.display = 'block';
+                    showError(res.text || 'Ошибка сервера');
                 }
             })
-            .catch(error => {
-                document.getElementById('error-message').textContent = 'Ошибка отправки: ' + error.message;
-                document.getElementById('error-message').style.display = 'block';
-            })
+            .catch(err => showError('Ошибка отправки: ' + err.message))
             .finally(() => {
-                // Восстанавливаем кнопку
-                submitBtn.textContent = originalText;
+                submitBtn.textContent = origText;
                 submitBtn.disabled = false;
             });
         });
     }
-});
 
-// Функция показа модального окна с номером запроса
-function showSuccessModal(message) {
-    console.log('Показываем успех:', message);
-    
-    // Ищем ID в сообщении (формат: "Запрос #15 отправлен!")
-    const match = message.match(/#(\d+)/); // Ищем #15
-    
-    if (match) {
-        const requestId = match[1]; // 15
-        console.log('ID запроса:', requestId);
-        
-        // Заполняем ID в модальном окне
-        const requestIdElement = document.getElementById('requestId');
-        if (requestIdElement) {
-            requestIdElement.textContent = requestId; // Просто 15
-            requestIdElement.dataset.fullNumber = requestId;
-        }
-        
-        // Показываем модальное окно
-        const successModalElement = document.getElementById('successModal');
-        if (successModalElement) {
-            const successModal = new bootstrap.Modal(successModalElement);
-            successModal.show();
-        }
-    } else {
-        alert(message);
+    function showError(msg) {
+        const el = document.getElementById('error-message');
+        el.textContent = msg;
+        el.style.display = 'block';
     }
-}
 
-// ========== ДОБАВИТЬ В КОНЕЦ ФАЙЛА ==========
+    function showSuccessModal(message) {
+        const match = message.match(/#(\d+)/);
+        if (match) {
+            const id = match[1];
+            const el = document.getElementById('requestId');
+            if (el) {
+                el.textContent = id;
+                el.dataset.fullNumber = id;
+            }
+            new bootstrap.Modal(document.getElementById('successModal')).show();
+        } else {
+            alert(message);
+        }
+    }
 
-// Кнопка очистки студента
-const clearStudentBtn = document.getElementById('clear-student');
-if (clearStudentBtn) {
-    clearStudentBtn.addEventListener('click', function() {
-        studentInput.value = '';
-        studentIdField.value = '';
-        studentSuggestions.style.display = 'none';
+    // Кнопка "Проверить статус" в модальном окне успеха
+    document.getElementById('checkStatusBtn')?.addEventListener('click', function() {
+        const el = document.getElementById('requestId');
+        const id = el?.dataset.fullNumber || '';
+        window.location.href = '/check-status?request_id=' + encodeURIComponent(id);
     });
-}
-
-// ========== КОНЕЦ ДОБАВЛЕНИЯ ==========
+});

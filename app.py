@@ -1,57 +1,44 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session, flash
 from config import Config
-from models import db, Group, Book, Student, BookRequest
+from models import db, Group, Book, Student, BookRequest, BookCopy
 from datetime import datetime, timedelta
 from functools import wraps
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session, flash
-from datetime import datetime, timedelta
 
-# Простой пароль для библиотекаря (позже можно сделать базу пользователей)
-ADMIN_PASSWORD = "library123"
+# Пароль админа
+ADMIN_PASSWORD = "KitRulit"
 
 def admin_required(f):
-    """Декоратор для проверки пароля админа"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        # Проверяем пароль из сессии или формы
         if not session.get('admin_logged_in'):
             return redirect(url_for('admin_login'))
         return f(*args, **kwargs)
     return decorated_function
 
-# Создаем приложение Flask
 app = Flask(__name__)
 app.config.from_object(Config)
-app.secret_key = 'ваш-секретный-ключ-для-сессий-12345'  # Любая строка
+app.secret_key = 'ваш-секретный-ключ-для-сессий-12345'
 
-# Инициализируем базу данных с приложением
 db.init_app(app)
 
-ADMIN_PASSWORD = "KitRulit"
-
-# Создаем все таблицы в базе данных (если их еще нет)
 with app.app_context():
     db.create_all()
-    print("База данных создана!")
+    print("База данных готова!")
 
 @app.route('/')
 def index():
-    """Главная страница - форма для студентов"""
     return render_template('index.html')
 
 @app.route('/get-groups')
 def get_groups():
-    """Возвращает список групп для выпадающего меню"""
     groups = Group.query.all()
     groups_list = [{'id': g.id, 'name': g.name} for g in groups]
     return jsonify(groups_list)
 
 @app.route('/get-books/<int:group_id>')
 def get_books(group_id):
-    """Возвращает книги для выбранной группы (по языку и курсу)"""
     group = Group.query.get_or_404(group_id)
     
-    # Фильтруем книги по языку группы и курсу
     books = Book.query.filter_by(
         language=group.language,
         course=group.course
@@ -59,253 +46,206 @@ def get_books(group_id):
     
     books_list = []
     for book in books:
-        # Показываем только книги, которые доступны
-        if book.available_quantity > 0:
-            # Сколько экземпляров уже "занято" (выдано и ещё не возвращено)
-            already_issued = book.total_quantity - book.available_quantity
-
-            # Свободные экземпляры идут подряд от already_issued+1 до total_quantity
-            free_start = already_issued + 1
-            free_end = book.total_quantity
-
+        available = book.available_quantity
+        if available > 0:
             books_list.append({
                 'id': book.id,
                 'name': f"{book.name} ({book.author}, {book.year})",
-                'available': book.available_quantity,
-                'copy_start': free_start,
-                'copy_end': free_end
+                'available': available
             })
     
     return jsonify(books_list)
 
 @app.route('/search-students')
 def search_students():
-    """Поиск студентов по ФИО с фильтрацией по группе"""
     query = request.args.get('q', '').strip()
     group_id = request.args.get('group_id', '')
     
-    # Если пустой запрос - возвращаем пустой список
     if not query:
         return jsonify([])
     
-    # Базовый запрос
     students_query = Student.query
-    
-    # Фильтр по группе, если указана
     if group_id and group_id != 'null' and group_id != '':
         students_query = students_query.filter_by(group_id=int(group_id))
     
-    # ПРОСТОЙ поиск: ищем подстроку в любом месте ФИО (регистронезависимый)
     students = students_query.filter(
         Student.full_name.ilike(f'%{query}%')
     ).limit(20).all()
     
-    students_list = []
-    for student in students:
-        students_list.append({
-            'id': student.id,
-            'name': student.full_name,
-            'group': student.group.name if student.group else 'Нет группы'
-        })
-    
+    students_list = [{'id': s.id, 'name': s.full_name} for s in students]
     return jsonify(students_list)
 
 @app.route('/get-students/<int:group_id>')
 def get_students(group_id):
-    """Получить всех студентов группы (без поиска)"""
     students = Student.query.filter_by(group_id=group_id).all()
-    
-    students_list = []
-    for student in students:
-        students_list.append({
-            'id': student.id,
-            'name': student.full_name
-        })
-    
+    students_list = [{'id': s.id, 'name': s.full_name} for s in students]
     return jsonify(students_list)
 
 @app.route('/request-book', methods=['POST'])
 def request_book():
-    """Обработка формы заявки"""
+    """Создание запроса студентом с привязкой экземпляров"""
     try:
-        # Получаем данные из формы
         student_id = request.form.get('student_id')
         book_id = request.form.get('book_id')
         quantity = int(request.form.get('quantity', 1))
+        copy_codes_str = request.form.get('copy_codes', '').strip()
         
-        # 1. Проверяем, что студент существует
         student = Student.query.get(student_id)
         if not student:
             return "Ошибка: Студент не найден", 400
         
-        # 2. Проверяем, что книга существует
         book = Book.query.get(book_id)
         if not book:
             return "Ошибка: Книга не найдена", 400
         
-        # 3. Проверяем количество
         if quantity <= 0:
             return "Ошибка: Количество должно быть больше 0", 400
         
-        if quantity > book.available_quantity:
-            return f"Ошибка: Доступно только {book.available_quantity} экземпляров", 400
+        available = book.available_quantity
+        if quantity > available:
+            return f"Ошибка: Доступно только {available} экземпляров", 400
         
-        # 4. Проверяем, что книга подходит для группы студента
-        student_group = student.group
-        if not student_group:
-            return "Ошибка: У студента нет группы", 400
+        if book.language != student.group.language or book.course != student.group.course:
+            return "Ошибка: Эта книга не для вашей группы", 400
         
-        if book.language != student_group.language or book.course != student_group.course:
-            return "Ошибка: Эта книга не предназначена для вашей группы", 400
-        
-        # 5. ГЕНЕРИРУЕМ НОМЕР ЗАПРОСА (НОВОЕ!)
-        today = datetime.now().strftime('%d%m%y')  # Формат: ДДММГГ (14 марта 2024 → 140324)
-        
-        # Ищем последний номер за сегодня
+        # Генерация номера запроса
+        today = datetime.now().strftime('%d%m%y')
         last_request = BookRequest.query.filter(
             BookRequest.request_number.like(f'{today}-%')
         ).order_by(BookRequest.id.desc()).first()
         
+        next_number = 1
         if last_request and last_request.request_number:
-            # Извлекаем номер из строки "140324-001"
-            # split('-') → ["140324", "001"]
             last_number = int(last_request.request_number.split('-')[1])
             next_number = last_number + 1
-        else:
-            # Первый запрос за сегодня
-            next_number = 1
         
-        # Форматируем номер с ведущими нулями: 001, 002, ...
-        request_number = f'{today}-{next_number:03d}'  # Пример: "140324-001"
-
-        # 6. Считаем диапазон экземпляров ДЛЯ ЭТОЙ ЗАЯВКИ
-        already_issued = book.total_quantity - book.available_quantity
-        start_index = already_issued + 1
-        end_index = already_issued + quantity
+        request_number = f'{today}-{next_number:03d}'
         
-        # 7. Создаем запись в журнале
+        # Создаём запрос и сохраняем, чтобы получить ID
         new_request = BookRequest(
             student_id=student_id,
             book_id=book_id,
             quantity=quantity,
             status='ожидание',
             request_date=datetime.now(),
-            request_number=request_number,
-            copy_start_index=start_index,
-            copy_end_index=end_index
+            request_number=request_number
         )
-
         db.session.add(new_request)
+        db.session.commit()  # Теперь new_request.id существует
+        
+        # Проверка и привязка кодов
+        codes_list = [c.strip() for c in copy_codes_str.split(',') if c.strip()]
+        if len(codes_list) != quantity:
+            return f"Ошибка: Прикреплено {len(codes_list)} экземпляров, ожидалось {quantity}", 400
+        
+        for code in codes_list:
+            copy = BookCopy.query.filter_by(copy_code=code, book_id=book_id).first()
+            if not copy:
+                return f"Ошибка: Экземпляр {code} не найден или не принадлежит этой книге", 400
+            if not copy.is_available:
+                return f"Ошибка: Экземпляр {code} уже выдан", 400
+            copy.current_request_id = new_request.id
+            copy.is_available = False
+        
         db.session.commit()
         
-        # 7. Возвращаем сообщение с номером запроса
-        return f"✅ Запрос #{new_request.id} отправлен! Ожидайте подтверждения библиотекаря."
+        return f"✅ Запрос #{new_request.id} отправлен! Экземпляры зарезервированы."
         
-    except ValueError:
-        return "Ошибка: Неверное количество", 400
     except Exception as e:
         db.session.rollback()
         return f"Ошибка сервера: {str(e)}", 500
 
-@app.route('/find-student-by-name', methods=['POST'])
-def find_student_by_name():
-    """Найти студента по точному ФИО и группе"""
-    data = request.get_json()
-    full_name = data.get('full_name', '').strip()
-    group_id = data.get('group_id')
-    
-    if not full_name or not group_id:
-        return jsonify({'error': 'Не указано ФИО или группа'}), 400
-    
-    student = Student.query.filter_by(
-        full_name=full_name,
-        group_id=int(group_id)
-    ).first()
-    
-    if student:
-        return jsonify({
-            'id': student.id,
-            'name': student.full_name
-        })
-    else:
-        return jsonify({'error': 'Студент не найден'}), 404
-    
-# Добавляем секретный ключ для сессий в Config (config.py)
-# Или прямо в app.py:
-app.secret_key = 'ваш-секретный-ключ-для-сессий'
-
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
-    """Страница входа для библиотекаря"""
     if request.method == 'POST':
         password = request.form.get('password', '')
-        
-        # Простая проверка пароля
         if password == ADMIN_PASSWORD:
             session['admin_logged_in'] = True
             return redirect(url_for('admin_dashboard'))
         else:
             flash('Неверный пароль')
-            return redirect(url_for('admin_login'))
-    
     return render_template('admin_login.html')
 
 @app.route('/admin/logout')
 def admin_logout():
-    """Выход из админки"""
     session.pop('admin_logged_in', None)
     return redirect(url_for('index'))
 
 @app.route('/admin')
 @admin_required
 def admin_dashboard():
-    """Главная страница админ-панели (без фильтрации)"""
     requests = BookRequest.query.order_by(BookRequest.request_date.desc()).all()
-    return render_template('admin.html', 
+    return render_template('admin.html',
                          requests=requests,
                          current_status='all',
                          current_date='all',
                          search_query='',
                          custom_date='')
 
-@app.route('/admin/confirm-issue/<int:request_id>', methods=['POST'])
+@app.route('/admin/assign-copy-ids/<int:request_id>', methods=['POST'])
 @admin_required
-def confirm_issue(request_id):
-    """Подтвердить выдачу книги"""
+def assign_copy_ids(request_id):
+    """Привязка конкретных экземпляров (по QR-кодам) к запросу"""
     try:
+        data = request.get_json()
+        copy_codes_str = data.get('copy_codes', '').strip()
+        
         book_request = BookRequest.query.get_or_404(request_id)
         
-        # Проверяем, что статус "ожидание"
         if book_request.status != 'ожидание':
             return jsonify({'success': False, 'error': 'Запрос уже обработан'}), 400
         
-        # Проверяем, что книга еще доступна
-        book = Book.query.get(book_request.book_id)
-        if not book:
-            return jsonify({'success': False, 'error': 'Книга не найдена'}), 404
-            
-        if book_request.quantity > book.available_quantity:
-            return jsonify({'success': False, 'error': f'Недостаточно книг. Доступно: {book.available_quantity}'}), 400
-
-        # Текущие "занятые" экземпляры = всего - доступно.
-        # Например: всего 50, доступно 25 → занято 25 → свободны 26‑50.
-        already_issued = book.total_quantity - book.available_quantity
-
-        # Назначаем диапазон экземпляров для этого запроса:
-        # начинаем с первого свободного и берём quantity штук подряд.
-        start_index = already_issued + 1
-        end_index = already_issued + book_request.quantity
-
-        book_request.copy_start_index = start_index
-        book_request.copy_end_index = end_index
+        if not copy_codes_str:
+            return jsonify({'success': False, 'error': 'Не указаны коды экземпляров'}), 400
         
-        # Обновляем статус и дату выдачи
+        codes_list = [code.strip() for code in copy_codes_str.split(',') if code.strip()]
+        
+        if len(codes_list) != book_request.quantity:
+            return jsonify({'success': False, 'error': f'Количество кодов ({len(codes_list)}) не совпадает с запрошенным ({book_request.quantity})'}), 400
+        
+        # Проверяем каждый код
+        copies_to_assign = []
+        for code in codes_list:
+            copy = BookCopy.query.filter_by(copy_code=code, book_id=book_request.book_id).first()
+            if not copy:
+                return jsonify({'success': False, 'error': f'Экземпляр {code} не принадлежит этой книге'}), 400
+            if not copy.is_available:
+                return jsonify({'success': False, 'error': f'Экземпляр {code} уже выдан'}), 400
+            copies_to_assign.append(copy)
+        
+        # Временно привязываем (но ещё не выдаём)
+        for copy in copies_to_assign:
+            copy.current_request_id = book_request.id
+            copy.is_available = False
+        
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Экземпляры успешно привязаны'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/admin/confirm-issue/<int:request_id>', methods=['POST'])
+@admin_required
+def confirm_issue(request_id):
+    """Подтверждение выдачи — проверяем, что все экземпляры привязаны"""
+    try:
+        book_request = BookRequest.query.get_or_404(request_id)
+        
+        if book_request.status != 'ожидание':
+            return jsonify({'success': False, 'error': 'Запрос уже обработан'}), 400
+        
+        # Проверяем, что все нужные экземпляры привязаны
+        assigned_copies = BookCopy.query.filter_by(current_request_id=book_request.id).count()
+        if assigned_copies != book_request.quantity:
+            return jsonify({'success': False, 'error': f'Привязано только {assigned_copies} из {book_request.quantity} экземпляров. Отсканируйте все QR-коды.'}), 400
+        
+        # Всё ок — подтверждаем выдачу
         book_request.status = 'выдано'
         book_request.issue_date = datetime.now()
-        book_request.planned_return_date = datetime.now() + timedelta(minutes=90)
-
-        book.available_quantity -= book_request.quantity
-
+        book_request.planned_return_date = datetime.now() + timedelta(days=14)  # 14 дней на возврат
+        
         db.session.commit()
         
         return jsonify({'success': True, 'message': 'Выдача подтверждена'})
@@ -317,22 +257,20 @@ def confirm_issue(request_id):
 @app.route('/admin/mark-returned/<int:request_id>', methods=['POST'])
 @admin_required
 def mark_returned(request_id):
-    """Отметить книгу как возвращенную"""
     try:
         book_request = BookRequest.query.get_or_404(request_id)
         
-        # Проверяем, что статус "выдано"
         if book_request.status != 'выдано':
             return jsonify({'success': False, 'error': 'Книга не была выдана'}), 400
         
-        # Обновляем статус и дату возврата
+        # Освобождаем все экземпляры
+        copies = BookCopy.query.filter_by(current_request_id=book_request.id).all()
+        for copy in copies:
+            copy.is_available = True
+            copy.current_request_id = None
+        
         book_request.status = 'возвращено'
         book_request.actual_return_date = datetime.now()
-        
-        # Возвращаем книги в доступные
-        book = Book.query.get(book_request.book_id)
-        if book:
-            book.available_quantity += book_request.quantity
         
         db.session.commit()
         
@@ -345,77 +283,40 @@ def mark_returned(request_id):
 @app.route('/admin/reject-request/<int:request_id>', methods=['POST'])
 @admin_required
 def reject_request(request_id):
-    """Отклонить запрос"""
     try:
         book_request = BookRequest.query.get_or_404(request_id)
         
-        # Проверяем, что статус "ожидание"
         if book_request.status != 'ожидание':
             return jsonify({'success': False, 'error': 'Запрос уже обработан'}), 400
         
-        # Удаляем запрос (или можно изменить статус на "отклонено")
+        # Если были привязаны копии — освобождаем их
+        copies = BookCopy.query.filter_by(current_request_id=book_request.id).all()
+        for copy in copies:
+            copy.is_available = True
+            copy.current_request_id = None
+        
         db.session.delete(book_request)
         db.session.commit()
         
-        return jsonify({'success': True, 'message': 'Запрос отклонен'})
+        return jsonify({'success': True, 'message': 'Запрос отклонён'})
         
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
-    
-@app.route('/api/request-status/<int:request_id>')
-def api_request_status(request_id):
-    """API для получения статуса запроса (можно использовать для AJAX)"""
-    book_request = BookRequest.query.get(request_id)
-    
-    if not book_request:
-        return jsonify({'error': 'Запрос не найден'}), 404
-    
-    # Форматируем даты
-    dates = {}
-    if book_request.request_date:
-        dates['request_date'] = book_request.request_date.strftime('%d.%m.%Y %H:%M')
-    if book_request.issue_date:
-        dates['issue_date'] = book_request.issue_date.strftime('%d.%m.%Y %H:%M')
-    if book_request.actual_return_date:
-        dates['return_date'] = book_request.actual_return_date.strftime('%d.%m.%Y %H:%M')
-    
-    return jsonify({
-        'id': book_request.id,
-        'status': book_request.status,
-        'student_name': book_request.student.full_name if book_request.student else 'Неизвестно',
-        'book_name': book_request.book.name if book_request.book else 'Книга удалена',
-        'quantity': book_request.quantity,
-        'dates': dates
-    })
 
 @app.route('/check-status', methods=['GET', 'POST'])
 def check_status():
-    """Страница проверки статуса запроса"""
-    print("=== check_status ===")
-    
     request_input = None
-    
     if request.method == 'POST':
         request_input = request.form.get('request_id', '').strip()
-        print(f"POST запрос: {request_input}")
     else:
-        # GET запрос - проверяем параметр в URL
         request_input = request.args.get('request_id', '').strip()
-        print(f"GET запрос: {request_input}")
     
-    # Если есть номер в запросе
     if request_input:
-        # Убираем # если есть
         if request_input.startswith('#'):
             request_input = request_input[1:]
         
-        print(f"Ищем запрос: '{request_input}'")
-        
-        # 1. Ищем по request_number
         book_request = BookRequest.query.filter_by(request_number=request_input).first()
-        
-        # 2. Если не нашли, ищем по ID
         if not book_request:
             try:
                 request_id_int = int(request_input)
@@ -424,42 +325,26 @@ def check_status():
                 pass
         
         if book_request:
-            print(f"✅ Найден запрос: {book_request.request_number}")
             return render_template('status_result.html', book_request=book_request)
         else:
-            print(f"❌ Запрос не найден: {request_input}")
             flash('Запрос не найден')
     
-    # Показываем форму
     return render_template('check_status.html')
-
-@app.route('/status/<int:request_id>')
-def status_result(request_id):
-    """Детальная страница статуса запроса"""
-    book_request = BookRequest.query.get_or_404(request_id)
-    return render_template('status_result.html', book_request=book_request)
 
 @app.route('/admin/filter', methods=['GET'])
 @admin_required
 def admin_filter():
-    """Фильтрация запросов для админ-панели"""
-    
-    # Получаем параметры фильтрации
     date_filter = request.args.get('date', 'all')
     status_filter = request.args.get('status', 'all')
     search_query = request.args.get('search', '').strip()
     custom_date = request.args.get('custom_date', '')
     
-    # Базовый запрос
     query = BookRequest.query
     
-    # Фильтр по статусу (старый функционал)
     if status_filter != 'all':
         query = query.filter(BookRequest.status == status_filter)
     
-    # Фильтр по дате (новый функционал)
     today_date = datetime.now().date()
-    
     if date_filter == 'today':
         query = query.filter(db.func.date(BookRequest.request_date) == today_date)
     elif date_filter == 'yesterday':
@@ -472,22 +357,24 @@ def admin_filter():
         except ValueError:
             pass
     
-    # Поиск по ФИО студента
     if search_query:
-        query = query.join(Student).filter(
-            Student.full_name.ilike(f'%{search_query}%')
-        )
+        query = query.join(Student).filter(Student.full_name.ilike(f'%{search_query}%'))
     
-    # Сортировка по дате (новые сверху)
     requests = query.order_by(BookRequest.request_date.desc()).all()
     
-    return render_template('admin.html', 
+    return render_template('admin.html',
                          requests=requests,
                          current_status=status_filter,
                          current_date=date_filter,
                          search_query=search_query,
                          custom_date=custom_date)
 
-# Запуск приложения
+@app.route('/get-book-by-copy-code/<copy_code>')
+def get_book_by_copy_code(copy_code):
+    copy = BookCopy.query.filter_by(copy_code=copy_code).first()
+    if copy and copy.book:
+        return jsonify({'book_id': copy.book.id})
+    return jsonify({'error': 'Not found'}), 404
+
 if __name__ == '__main__':
     app.run(debug=True)

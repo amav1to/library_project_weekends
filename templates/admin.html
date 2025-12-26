@@ -6,6 +6,7 @@
     <title>Админ-панель библиотеки</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
     <style>
         :root {
             --kit-orange: #ff6b00;
@@ -117,7 +118,6 @@
             vertical-align: middle;
         }
         
-        /* Выравнивание колонки "Кол-во" по центру */
         .table td:nth-child(5) {
             text-align: center;
         }
@@ -132,7 +132,6 @@
             border-color: white;
         }
 
-        /* Стили для новых кнопок фильтров */
         .btn-check + .btn-outline-secondary:hover,
         .btn-check:checked + .btn-outline-secondary {
             background-color: #6c757d;
@@ -161,25 +160,21 @@
             color: white;
         }
 
-        /* Адаптивность */
         @media (max-width: 768px) {
             .btn-group .btn, .input-group {
                 margin-bottom: 5px;
             }
-            
             .col-md-6 {
                 margin-bottom: 15px;
             }
         }
 
-        /* Подсветка активного фильтра */
         .filter-btn.active {
             background-color: var(--kit-orange) !important;
             border-color: var(--kit-orange) !important;
             color: white !important;
         }
 
-        /* Кнопка сброса */
         .btn-reset {
             background: linear-gradient(90deg, #6c757d 0%, #495057 100%);
             color: white;
@@ -189,6 +184,60 @@
         .btn-reset:hover {
             background: linear-gradient(90deg, #495057 0%, #343a40 100%);
             color: white;
+        }
+
+        /* QR-сканер */
+        .qr-scanner-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            border: 2px solid var(--kit-orange);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        #qr-video {
+            width: 100%;
+            height: auto;
+        }
+
+        .scanner-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            border: 2px solid rgba(255, 107, 0, 0.5);
+            box-shadow: inset 0 0 0 1000px rgba(0, 0, 0, 0.3);
+        }
+
+        .manual-input {
+            margin-top: 1rem;
+        }
+
+        .attached-count {
+            margin-top: 1rem;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .attached-list {
+            margin-top: 1rem;
+            max-height: 150px;
+            overflow-y: auto;
+            padding: 0.5rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        /* Зеркальное отражение камеры */
+        .mirrored-video {
+            transform: scaleX(-1);
+        }
+        /* Оверлей тоже должен быть отзеркален, чтобы рамка совпадала */
+        .mirrored-overlay {
+            transform: scaleX(-1);
         }
     </style>
 </head>
@@ -244,20 +293,14 @@
                 </div>
             </div>
             
-            <!-- НОВЫЕ ФИЛЬТРЫ: ДАТА И ПОИСК -->
+            <!-- Фильтры -->
             <div class="row mb-4">
-                <!-- ПОИСК ПО ФИО -->
                 <div class="col-md-6 mb-3">
                     <div class="input-group">
                         <span class="input-group-text" style="background: rgba(255, 107, 0, 0.1);">
                             <i class="bi bi-search" style="color: var(--kit-orange);"></i>
                         </span>
-                        <input type="text" 
-                            class="form-control" 
-                            id="searchInput" 
-                            placeholder="Поиск по ФИО студента..."
-                            value="{{ search_query }}"
-                            onkeypress="handleSearchEnter(event)">
+                        <input type="text" class="form-control" id="searchInput" placeholder="Поиск по ФИО студента..." value="{{ search_query }}" onkeypress="handleSearchEnter(event)">
                         <button class="btn btn-primary" type="button" onclick="applySearch()">
                             <i class="bi bi-arrow-right"></i>
                         </button>
@@ -265,45 +308,20 @@
                     <small class="text-muted">Нажмите Enter для поиска</small>
                 </div>
                 
-                <!-- ФИЛЬТРЫ ПО ДАТЕ -->
                 <div class="col-md-6 mb-3">
                     <div class="btn-group" role="group">
-                        <!-- Все даты -->
-                        <input type="radio" class="btn-check" name="date_filter" id="date_all" 
-                            value="all" autocomplete="off" 
-                            {% if current_date == 'all' %}checked{% endif %}
-                            onchange="applyDateFilter(this.value)">
-                        <label class="btn btn-outline-secondary" for="date_all" title="Все даты">
-                            <i class="bi bi-calendar"></i> Все
-                        </label>
+                        <input type="radio" class="btn-check" name="date_filter" id="date_all" value="all" autocomplete="off" {% if current_date == 'all' %}checked{% endif %} onchange="applyDateFilter(this.value)">
+                        <label class="btn btn-outline-secondary" for="date_all"><i class="bi bi-calendar"></i> Все</label>
                         
-                        <!-- Сегодня -->
-                        <input type="radio" class="btn-check" name="date_filter" id="date_today" 
-                            value="today" autocomplete="off"
-                            {% if current_date == 'today' %}checked{% endif %}
-                            onchange="applyDateFilter(this.value)">
-                        <label class="btn btn-outline-primary" for="date_today" title="Сегодня">
-                            <i class="bi bi-sun"></i> Сегодня
-                        </label>
+                        <input type="radio" class="btn-check" name="date_filter" id="date_today" value="today" autocomplete="off" {% if current_date == 'today' %}checked{% endif %} onchange="applyDateFilter(this.value)">
+                        <label class="btn btn-outline-primary" for="date_today"><i class="bi bi-sun"></i> Сегодня</label>
                         
-                        <!-- Вчера -->
-                        <input type="radio" class="btn-check" name="date_filter" id="date_yesterday" 
-                            value="yesterday" autocomplete="off"
-                            {% if current_date == 'yesterday' %}checked{% endif %}
-                            onchange="applyDateFilter(this.value)">
-                        <label class="btn btn-outline-warning" for="date_yesterday" title="Вчера">
-                            <i class="bi bi-moon"></i> Вчера
-                        </label>
+                        <input type="radio" class="btn-check" name="date_filter" id="date_yesterday" value="yesterday" autocomplete="off" {% if current_date == 'yesterday' %}checked{% endif %} onchange="applyDateFilter(this.value)">
+                        <label class="btn btn-outline-warning" for="date_yesterday"><i class="bi bi-moon"></i> Вчера</label>
                         
-                        <!-- Кастомная дата с отдельной кнопкой -->
                         <div class="input-group" style="width: auto;">
-                            <input type="date" 
-                                class="form-control" 
-                                id="customDateInput"
-                                value="{{ custom_date }}"
-                                style="max-width: 150px;">
-                            <button class="btn btn-outline-info" type="button" onclick="applyCustomDate()" 
-                                    title="Применить выбранную дату">
+                            <input type="date" class="form-control" id="customDateInput" value="{{ custom_date }}" style="max-width: 150px;">
+                            <button class="btn btn-outline-info" type="button" onclick="applyCustomDate()">
                                 <i class="bi bi-calendar-check"></i>
                             </button>
                         </div>
@@ -319,32 +337,25 @@
                     {% endif %}
                 </h2>
                 
-                <!-- В блоке с заголовком, после <h2> -->
                 <div class="d-flex align-items-center gap-2">
                     {% if current_status != 'all' or current_date != 'all' or search_query %}
-                    <button class="btn btn-sm btn-reset" onclick="resetAllFilters()" 
-                            title="Сбросить все фильтры">
+                    <button class="btn btn-sm btn-reset" onclick="resetAllFilters()">
                         <i class="bi bi-x-circle"></i> Сбросить
                     </button>
                     {% endif %}
                 </div>
 
-                <!-- СТАТИСТИКА (оставляем как было) -->
                 <div class="btn-group">
-                    <button class="btn filter-btn btn-outline-primary {% if current_status == 'all' %}active{% endif %}" 
-                            onclick="applyStatusFilter('all')">
+                    <button class="btn filter-btn btn-outline-primary {% if current_status == 'all' %}active{% endif %}" onclick="applyStatusFilter('all')">
                         <i class="bi bi-grid"></i> Все
                     </button>
-                    <button class="btn filter-btn btn-outline-warning {% if current_status == 'ожидание' %}active{% endif %}" 
-                            onclick="applyStatusFilter('ожидание')">
+                    <button class="btn filter-btn btn-outline-warning {% if current_status == 'ожидание' %}active{% endif %}" onclick="applyStatusFilter('ожидание')">
                         <i class="bi bi-clock"></i> Ожидание
                     </button>
-                    <button class="btn filter-btn btn-outline-info {% if current_status == 'выдано' %}active{% endif %}" 
-                            onclick="applyStatusFilter('выдано')">
+                    <button class="btn filter-btn btn-outline-info {% if current_status == 'выдано' %}active{% endif %}" onclick="applyStatusFilter('выдано')">
                         <i class="bi bi-check-circle"></i> Выдано
                     </button>
-                    <button class="btn filter-btn btn-outline-success {% if current_status == 'возвращено' %}active{% endif %}" 
-                            onclick="applyStatusFilter('возвращено')">
+                    <button class="btn filter-btn btn-outline-success {% if current_status == 'возвращено' %}active{% endif %}" onclick="applyStatusFilter('возвращено')">
                         <i class="bi bi-arrow-return-left"></i> Возвращено
                     </button>
                 </div>
@@ -360,7 +371,7 @@
                             <th><i class="bi bi-people"></i> Группа</th>
                             <th><i class="bi bi-book"></i> Книга</th>
                             <th><i class="bi bi-hash"></i> Кол-во</th>
-                            <th><i class="bi bi-123"></i> ID экземпляров</th>
+                            <th><i class="bi bi-123"></i> Экземпляры</th>
                             <th><i class="bi bi-calendar"></i> Дата запроса</th>
                             <th><i class="bi bi-tag"></i> Статус</th>
                             <th><i class="bi bi-gear"></i> Действия</th>
@@ -393,7 +404,7 @@
                             </td>
                             <td>
                                 <small class="text-muted">
-                                    {{ req.copy_range_display }}
+                                    {{ req.assigned_copy_codes }}
                                 </small>
                             </td>
                             <td>
@@ -418,25 +429,29 @@
                             </td>
                             <td>
                                 {% if req.status == 'ожидание' %}
+                                    <button class="btn btn-info btn-sm action-btn" 
+                                        data-action="scan" 
+                                        data-id="{{ req.id }}"
+                                        title="Привязать экземпляры (QR)">
+                                        <i class="bi bi-qr-code-scan"></i>
+                                    </button>
                                     <button class="btn btn-success btn-sm action-btn" 
                                         data-action="confirm" 
                                         data-id="{{ req.id }}"
-                                        title="Подтвердить выдачу"
-                                        style="background: var(--kit-green); border-color: var(--kit-green);">
+                                        title="Подтвердить выдачу">
                                         <i class="bi bi-check-lg"></i>
                                     </button>
                                     <button class="btn btn-danger btn-sm action-btn"
                                         data-action="reject" 
                                         data-id="{{ req.id }}"
-                                        title="Отклонить запрос">
+                                        title="Отклонить">
                                         <i class="bi bi-x-lg"></i>
                                     </button>
                                 {% elif req.status == 'выдано' %}
                                     <button class="btn btn-primary btn-sm action-btn"
                                         data-action="return" 
                                         data-id="{{ req.id }}"
-                                        title="Отметить возврат"
-                                        style="background: var(--kit-orange); border-color: var(--kit-orange);">
+                                        title="Отметить возврат">
                                         <i class="bi bi-arrow-return-left"></i>
                                     </button>
                                 {% else %}
@@ -449,35 +464,61 @@
                 </table>
             </div>
             {% else %}
-            <div class="alert alert-info text-center" style="background: rgba(13, 110, 253, 0.1);">
+            <div class="alert alert-info text-center">
                 <i class="bi bi-info-circle display-4" style="color: var(--kit-orange);"></i>
-                <h4 class="mt-3" style="color: var(--kit-orange);">Запросов на выдачу книг пока нет</h4>
-                <p class="text-muted">Когда студенты начнут оформлять заявки, они появятся здесь</p>
+                <h4 class="mt-3" style="color: var(--kit-orange);">Запросов нет</h4>
+                <p class="text-muted">Когда студенты оформят заявки, они появятся здесь</p>
             </div>
             {% endif %}
         </div>
     </div>
     
-    <!-- Модальное окно для подтверждения -->
+    <!-- Модальное окно подтверждения -->
     <div class="modal fade" id="confirmModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header" style="background: linear-gradient(90deg, var(--kit-orange) 0%, #ff8c00 100%); color: white;">
-                    <h5 class="modal-title">
-                        <i class="bi bi-question-circle"></i> Подтверждение
-                    </h5>
+                    <h5 class="modal-title"><i class="bi bi-question-circle"></i> Подтверждение</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body" id="modalBody">
-                    <!-- Сюда будет вставляться текст -->
+                <div class="modal-body" id="modalBody"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="bi bi-x-circle"></i> Отмена</button>
+                    <button type="button" class="btn btn-primary" id="modalConfirmBtn" style="background: var(--kit-green); border-color: var(--kit-green);">
+                        <i class="bi bi-check-lg"></i> Подтвердить
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно QR-сканера для привязки экземпляров -->
+    <div class="modal fade" id="qrScannerModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(90deg, var(--kit-orange) 0%, #ff8c00 100%); color: white;">
+                    <h5 class="modal-title"><i class="bi bi-qr-code-scan"></i> Привязка экземпляров</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" onclick="stopScanner()"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="qr-scanner-container">
+                        <video id="qr-video" playsinline class="mirrored-video"></video>
+                        <div class="scanner-overlay mirrored-overlay"></div>
+                    </div>
+                    <p class="text-center mt-3">Сканируйте QR-коды на книгах (можно несколько подряд)</p>
+                    <div class="manual-input">
+                        <label for="manualCopyCodes">Ручной ввод кодов (по одному на строку):</label>
+                        <textarea id="manualCopyCodes" class="form-control" rows="5"></textarea>
+                    </div>
+                    <div class="attached-count" id="attachedCount">Прикреплено: 0 из {{ request_quantity }}</div>
+                    <div class="attached-list border mt-2 p-2" id="attachedList"></div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="stopScanner()">
                         <i class="bi bi-x-circle"></i> Отмена
                     </button>
-                    <button type="button" class="btn btn-primary" id="modalConfirmBtn" 
-                            style="background: var(--kit-green); border-color: var(--kit-green);">
-                        <i class="bi bi-check-lg"></i> Подтвердить
+                    <button type="button" class="btn btn-primary" id="saveCopiesBtn">
+                        <i class="bi bi-save"></i> Привязать
                     </button>
                 </div>
             </div>
@@ -488,7 +529,6 @@
     <script>
         console.log('=== АДМИН-ПАНЕЛЬ ЗАГРУЖЕНА ===');
         
-        // Модальное окно Bootstrap
         const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
         const modalBody = document.getElementById('modalBody');
         const modalConfirmBtn = document.getElementById('modalConfirmBtn');
@@ -496,248 +536,144 @@
         let currentRequestId = null;
         let currentAction = '';
         
-        // Обработчик кликов по кнопкам действий
+        // QR-сканер
+        const qrScannerModal = new bootstrap.Modal(document.getElementById('qrScannerModal'));
+        let videoElement = document.getElementById('qr-video');
+        let manualCopyCodes = document.getElementById('manualCopyCodes');
+        let attachedCount = document.getElementById('attachedCount');
+        let attachedList = document.getElementById('attachedList');
+        let scannedCodes = new Set();
+        let stream = null;
+        let scanningInterval = null;
+        let requestQuantity = 0;
+
         document.addEventListener('click', function(event) {
             let button = event.target;
+            if (button.tagName === 'I') button = button.closest('button');
             
-            // Если кликнули по иконке внутри кнопки
-            if (button.tagName === 'I') {
-                button = button.closest('button');
-            }
-            
-            // Проверяем кнопки фильтров
-            if (button && button.hasAttribute('data-filter')) {
-                const filter = button.getAttribute('data-filter');
-                const allFilterBtns = document.querySelectorAll('[data-filter]');
-                
-                // Удаляем active со всех кнопок
-                allFilterBtns.forEach(btn => {
-                    btn.classList.remove('active');
-                    btn.classList.remove('btn-primary');
-                    btn.classList.add('btn-outline-primary');
-                });
-                
-                // Добавляем active к текущей
-                button.classList.add('active');
-                button.classList.remove('btn-outline-primary');
-                button.classList.add('btn-primary');
-                
-                filterRequests(filter);
-                return;
-            }
-            
-            // Проверяем кнопки действий
             if (button && button.hasAttribute('data-action')) {
                 currentAction = button.getAttribute('data-action');
                 currentRequestId = button.getAttribute('data-id');
                 
-                console.log('Обрабатываем кнопку:', currentAction, 'ID:', currentRequestId);
-                
-                // Показываем модальное окно с вопросом
-                if (currentAction === 'confirm') {
-                    modalBody.innerHTML = '<div class="text-center"><i class="bi bi-check-circle display-4" style="color: var(--kit-green);"></i><h4 class="mt-3">Подтвердить выдачу книги?</h4><p class="text-muted">Книга будет помечена как выданная студенту</p></div>';
-                    modalConfirmBtn.innerHTML = '<i class="bi bi-check-lg"></i> Подтвердить выдачу';
+                if (currentAction === 'scan') {
+                    requestQuantity = parseInt(button.closest('tr').querySelector('td:nth-child(5) span').textContent);
+                    attachedCount.textContent = `Прикреплено: 0 из ${requestQuantity}`;
+                    scannedCodes.clear();
+                    manualCopyCodes.value = '';
+                    attachedList.innerHTML = '';
+                    qrScannerModal.show();
+                    startScanner();
+                } else if (currentAction === 'confirm') {
+                    modalBody.innerHTML = '<div class="text-center"><i class="bi bi-check-circle display-4" style="color: var(--kit-green);"></i><h4 class="mt-3">Подтвердить выдачу?</h4><p class="text-muted">Книги будут выданы студенту</p></div>';
+                    modalConfirmBtn.innerHTML = '<i class="bi bi-check-lg"></i> Подтвердить';
                     confirmModal.show();
-                } 
-                else if (currentAction === 'return') {
-                    modalBody.innerHTML = '<div class="text-center"><i class="bi bi-arrow-return-left display-4" style="color: var(--kit-orange);"></i><h4 class="mt-3">Отметить книгу как возвращенную?</h4><p class="text-muted">Книга будет возвращена в библиотечный фонд</p></div>';
-                    modalConfirmBtn.innerHTML = '<i class="bi bi-arrow-return-left"></i> Отметить возврат';
+                } else if (currentAction === 'return') {
+                    modalBody.innerHTML = '<div class="text-center"><i class="bi bi-arrow-return-left display-4" style="color: var(--kit-orange);"></i><h4 class="mt-3">Отметить возврат?</h4><p class="text-muted">Книги вернутся в фонд</p></div>';
+                    modalConfirmBtn.innerHTML = '<i class="bi bi-arrow-return-left"></i> Отметить';
                     confirmModal.show();
-                }
-                else if (currentAction === 'reject') {
-                    modalBody.innerHTML = '<div class="text-center"><i class="bi bi-x-circle display-4 text-danger"></i><h4 class="mt-3">Отклонить запрос на выдачу?</h4><p class="text-muted">Запрос будет отклонен и удален из системы</p></div>';
+                } else if (currentAction === 'reject') {
+                    modalBody.innerHTML = '<div class="text-center"><i class="bi bi-x-circle display-4 text-danger"></i><h4 class="mt-3">Отклонить запрос?</h4><p class="text-muted">Запрос будет удалён</p></div>';
                     modalConfirmBtn.innerHTML = '<i class="bi bi-x-lg"></i> Отклонить';
                     confirmModal.show();
                 }
-                
-                return;
             }
         });
         
-        // Обработчик подтверждения в модальном окне
         modalConfirmBtn.addEventListener('click', function() {
             if (!currentRequestId || !currentAction) return;
             
-            console.log('Отправляем запрос:', currentAction, 'ID:', currentRequestId);
-            
-            // Определяем URL для запроса
             let url = '';
-            if (currentAction === 'confirm') {
-                url = '/admin/confirm-issue/' + currentRequestId;
-            } else if (currentAction === 'return') {
-                url = '/admin/mark-returned/' + currentRequestId;
-            } else if (currentAction === 'reject') {
-                url = '/admin/reject-request/' + currentRequestId;
+            if (currentAction === 'confirm') url = '/admin/confirm-issue/' + currentRequestId;
+            else if (currentAction === 'return') url = '/admin/mark-returned/' + currentRequestId;
+            else if (currentAction === 'reject') url = '/admin/reject-request/' + currentRequestId;
+            
+            fetch(url, { method: 'POST' })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) location.reload();
+                    else alert('Ошибка: ' + data.error);
+                })
+                .finally(() => confirmModal.hide());
+        });
+
+        function startScanner() {
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+                .then(s => {
+                    stream = s;
+                    videoElement.srcObject = stream;
+                    videoElement.play();
+                    
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    scanningInterval = setInterval(() => {
+                        if (videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
+                            canvas.height = videoElement.videoHeight;
+                            canvas.width = videoElement.videoWidth;
+                            ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+                            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                            const code = jsQR(imageData.data, imageData.width, imageData.height);
+                            
+                            if (code) {
+                                const codeVal = code.data.trim();
+                                if (!scannedCodes.has(codeVal)) {
+                                    scannedCodes.add(codeVal);
+                                    manualCopyCodes.value += codeVal + '\n';
+                                    updateAttached();
+                                }
+                            }
+                        }
+                    }, 300);
+                })
+                .catch(err => alert('Ошибка камеры: ' + err));
+        }
+
+        function stopScanner() {
+            if (stream) stream.getTracks().forEach(t => t.stop());
+            if (scanningInterval) clearInterval(scanningInterval);
+            stream = null;
+            scanningInterval = null;
+            videoElement.srcObject = null;
+        }
+
+        function updateAttached() {
+            const codes = Array.from(scannedCodes);
+            attachedCount.textContent = `Прикреплено: ${codes.length} из ${requestQuantity}`;
+            attachedList.innerHTML = codes.map(c => `<div class="badge bg-success me-1">${c}</div>`).join('');
+        }
+
+        document.getElementById('saveCopiesBtn').addEventListener('click', function() {
+            const manual = manualCopyCodes.value.trim().split('\n').filter(c => c.trim());
+            const allCodes = [...new Set([...scannedCodes, ...manual])];
+            
+            if (allCodes.length !== requestQuantity) {
+                alert(`Нужно привязать ровно ${requestQuantity} экземпляров`);
+                return;
             }
             
-            // Отправляем запрос на сервер
-            fetch(url, {
+            fetch(`/admin/assign-copy-ids/${currentRequestId}`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ copy_codes: allCodes.join(',') })
             })
-            .then(response => {
-                console.log('Ответ сервера:', response.status);
-                return response.json();
-            })
+            .then(r => r.json())
             .then(data => {
-                console.log('Данные ответа:', data);
-                
-                if (data.success) {
-                    // Успешно - перезагружаем страницу
-                    console.log('Успех! Перезагружаем страницу...');
-                    location.reload();
-                } else {
-                    // Ошибка - показываем сообщение
-                    console.error('Ошибка сервера:', data.error);
-                    alert('Ошибка: ' + data.error);
-                }
-            })
-            .catch(error => {
-                console.error('Ошибка сети:', error);
-                alert('Ошибка сети: ' + error.message);
-            })
-            .finally(() => {
-                // Закрываем модальное окно
-                confirmModal.hide();
+                if (data.success) location.reload();
+                else alert('Ошибка: ' + data.error);
             });
+            
+            qrScannerModal.hide();
+            stopScanner();
         });
-        
-        // Функция фильтрации
-        function filterRequests(filter) {
-            console.log('Применяем фильтр:', filter);
-            
-            const rows = document.querySelectorAll('#requestsTable tbody tr');
-            const statusMap = {
-                'all': 'all',
-                'waiting': 'ожидание',
-                'issued': 'выдано',
-                'returned': 'возвращено'
-            };
-            
-            const targetStatus = statusMap[filter] || filter;
-            
-            rows.forEach(row => {
-                if (filter === 'all' || row.getAttribute('data-status') === targetStatus) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
-            });
-        }
 
-        // Текущие параметры фильтрации
+        // Фильтры (оставляем как было)
         let currentParams = new URLSearchParams(window.location.search);
-
-        // ФИЛЬТР ПО СТАТУСУ (старый функционал - обновляем)
-        function applyStatusFilter(status) {
-            currentParams.set('status', status);
-            window.location.href = `/admin/filter?${currentParams.toString()}`;
-        }
-
-        // ФИЛЬТР ПО ДАТЕ (новый функционал)
-        function applyDateFilter(dateType) {
-            currentParams.set('date', dateType);
-            
-            // Если выбрали не кастомную дату, удаляем параметр custom_date
-            if (dateType !== 'custom') {
-                currentParams.delete('custom_date');
-                window.location.href = `/admin/filter?${currentParams.toString()}`;
-            } else {
-                // Для кастомной даты показываем поле ввода
-                document.getElementById('customDateInput').focus();
-            }
-        }
-
-        // ВЫБОР КАСТОМНОЙ ДАТЫ
-        function applyCustomDate() {
-            const dateInput = document.getElementById('customDateInput');
-            const dateValue = dateInput.value;
-            
-            if (dateValue) {
-                // Создаем временную радио-кнопку для кастомной даты
-                currentParams.set('date', 'custom');
-                currentParams.set('custom_date', dateValue);
-                window.location.href = `/admin/filter?${currentParams.toString()}`;
-            } else {
-                alert('Выберите дату в календаре');
-            }
-        }
-
-        // ПОИСК ПО ФИО
-        function handleSearchEnter(event) {
-            if (event.key === 'Enter') {
-                applySearch();
-                event.preventDefault();
-            }
-        }
-
-        function applySearch() {
-            const searchInput = document.getElementById('searchInput');
-            const searchValue = searchInput.value.trim();
-            
-            if (searchValue) {
-                currentParams.set('search', searchValue);
-            } else {
-                currentParams.delete('search');
-            }
-            
-            window.location.href = `/admin/filter?${currentParams.toString()}`;
-        }
-
-        // ИНИЦИАЛИЗАЦИЯ КАЛЕНДАРЯ
-        document.addEventListener('DOMContentLoaded', function() {
-            // Установить максимальную дату (сегодня) для календаря
-            const today = new Date().toISOString().split('T')[0];
-            const dateInput = document.getElementById('customDateInput');
-            dateInput.max = today;
-            
-            // Если есть кастомная дата в параметрах, показать ее
-            if (currentParams.get('date') === 'custom' && currentParams.get('custom_date')) {
-                dateInput.value = currentParams.get('custom_date');
-                
-                // Создаем виртуальную радио-кнопку для кастомной даты
-                createCustomDateRadio();
-            }
-            
-            // Обработчик изменения даты в календаре
-            dateInput.addEventListener('change', function() {
-                if (this.value) {
-                    // Автоматически применяем фильтр при выборе даты
-                    applyCustomDate();
-                }
-            });
-        });
-
-        // Создаем виртуальную радио-кнопку для кастомной даты
-        function createCustomDateRadio() {
-            // Убираем активное состояние у других радио-кнопок
-            document.querySelectorAll('input[name="date_filter"]').forEach(radio => {
-                radio.checked = false;
-            });
-            
-            // Можно добавить визуальное выделение для кастомной даты
-            const dateInput = document.getElementById('customDateInput');
-            dateInput.style.borderColor = '#17a2b8';
-            dateInput.style.boxShadow = '0 0 0 0.25rem rgba(23, 162, 184, 0.25)';
-        }
-
-        // Автоматическое применение при выборе даты из календаря
-        document.getElementById('customDateInput').addEventListener('change', function() {
-            if (this.value) {
-                // Даем небольшую задержку для UX
-                setTimeout(() => {
-                    applyCustomDate();
-                }, 300);
-            }
-        });
-
-        // СБРОС ВСЕХ ФИЛЬТРОВ
-        function resetAllFilters() {
-            window.location.href = '/admin';
-        }
-
+        function applyStatusFilter(status) { currentParams.set('status', status); window.location.href = `/admin/filter?${currentParams.toString()}`; }
+        function applyDateFilter(dateType) { currentParams.set('date', dateType); if (dateType !== 'custom') currentParams.delete('custom_date'); window.location.href = `/admin/filter?${currentParams.toString()}`; }
+        function applyCustomDate() { const v = document.getElementById('customDateInput').value; if (v) { currentParams.set('date', 'custom'); currentParams.set('custom_date', v); window.location.href = `/admin/filter?${currentParams.toString()}`; } }
+        function applySearch() { const v = document.getElementById('searchInput').value.trim(); if (v) currentParams.set('search', v); else currentParams.delete('search'); window.location.href = `/admin/filter?${currentParams.toString()}`; }
+        function handleSearchEnter(e) { if (e.key === 'Enter') applySearch(); }
+        function resetAllFilters() { window.location.href = '/admin'; }
     </script>
 </body>
 </html>

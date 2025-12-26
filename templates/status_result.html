@@ -10,7 +10,6 @@
         :root {
             --kit-orange: #ff6b00;
             --kit-green: #4CAF50;
-            --kit-white: #ffffff;
         }
         
         body {
@@ -22,7 +21,6 @@
         .kit-header {
             background: linear-gradient(90deg, var(--kit-orange) 0%, #ff8c00 100%);
             padding: 1rem 0;
-            margin-bottom: 2rem;
             box-shadow: 0 4px 12px rgba(255, 107, 0, 0.15);
         }
         
@@ -68,17 +66,14 @@
         .status-waiting { 
             background: linear-gradient(90deg, #ffc107 0%, #ffdb4d 100%);
             color: #856404;
-            border: none;
         }
         .status-issued { 
             background: linear-gradient(90deg, var(--kit-orange) 0%, #ff8c00 100%);
             color: white;
-            border: none;
         }
         .status-returned { 
             background: linear-gradient(90deg, var(--kit-green) 0%, #5cb85c 100%);
             color: white;
-            border: none;
         }
         
         .card {
@@ -86,7 +81,6 @@
             border-radius: 12px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.05);
             margin-bottom: 1.5rem;
-            overflow: hidden;
         }
         
         .card-header {
@@ -97,20 +91,11 @@
             padding: 1rem 1.5rem;
         }
         
-        .table {
-            margin-bottom: 0;
-        }
-        
         .table th {
             color: var(--kit-orange);
             font-weight: 600;
             border-bottom: 2px solid rgba(255, 107, 0, 0.1);
             background-color: rgba(255, 107, 0, 0.05);
-        }
-        
-        .table td {
-            border-bottom: 1px solid rgba(0,0,0,0.05);
-            padding: 1rem;
         }
         
         .btn-primary {
@@ -119,7 +104,6 @@
             border-radius: 10px;
             padding: 0.75rem 1.5rem;
             font-weight: 600;
-            transition: all 0.3s;
         }
         
         .btn-primary:hover {
@@ -133,18 +117,11 @@
             border-radius: 10px;
             padding: 0.75rem 1.5rem;
             font-weight: 600;
-            transition: all 0.3s;
         }
         
         .btn-outline-primary:hover {
             background-color: var(--kit-orange);
             color: white;
-        }
-        
-        .btn-outline-secondary {
-            border-radius: 10px;
-            padding: 0.75rem 1.5rem;
-            font-weight: 600;
         }
         
         .timeline {
@@ -199,23 +176,23 @@
             margin: 1.5rem 0;
         }
         
-        .badge {
-            border-radius: 20px;
-            padding: 0.4em 0.8em;
-            font-weight: 600;
+        .copy-codes {
+            font-family: monospace;
+            font-size: 1.1em;
+            background: #f8f9fa;
+            padding: 0.75rem;
+            border-radius: 8px;
+            word-break: break-all;
         }
     </style>
 </head>
 <body>
-    <!-- Шапка с логотипом -->
     <header class="kit-header">
         <div class="container">
-            <div class="row align-items-center">
-                <div class="col-12 text-center">
-                    <div class="kit-logo">
-                        <i class="bi bi-journal-bookmark-fill"></i>
-                        Библиотека <span>KIT</span> колледжа
-                    </div>
+            <div class="text-center">
+                <div class="kit-logo">
+                    <i class="bi bi-journal-bookmark-fill"></i>
+                    Библиотека <span>KIT</span> колледжа
                 </div>
             </div>
         </div>
@@ -223,12 +200,11 @@
     
     <div class="container">
         <div class="status-card">
-            <!-- Заголовок с номером -->
             <div class="text-center mb-4">
                 <h3 style="color: var(--kit-orange);">
                     <i class="bi bi-journal-text"></i> Запрос #{{ book_request.id }}
                 </h3>
-                <p class="text-muted">Детали вашего запроса на книгу</p>
+                <p class="text-muted">Детали вашего запроса</p>
             </div>
             
             <!-- Статус -->
@@ -238,27 +214,27 @@
                         <i class="bi bi-clock-history"></i>
                     </div>
                     <h4><span class="badge status-badge status-waiting">Ожидание подтверждения</span></h4>
-                    <p class="text-muted">Ваш запрос ожидает обработки библиотекарем</p>
+                    <p class="text-muted">Запрос обрабатывается библиотекарем</p>
                     
                 {% elif book_request.status == 'выдано' %}
                     <div class="status-icon" style="color: var(--kit-orange);">
                         <i class="bi bi-check-circle"></i>
                     </div>
                     <h4><span class="badge status-badge status-issued">Книга выдана</span></h4>
-                    <p class="text-muted">Книга выдана, можете забирать</p>
+                    <p class="text-muted">Вы можете забрать книгу в библиотеке</p>
                     
                 {% elif book_request.status == 'возвращено' %}
                     <div class="status-icon" style="color: var(--kit-green);">
                         <i class="bi bi-arrow-return-left"></i>
                     </div>
                     <h4><span class="badge status-badge status-returned">Книга возвращена</span></h4>
-                    <p class="text-muted">Книга успешно возвращена в библиотеку</p>
+                    <p class="text-muted">Спасибо за возврат!</p>
                 {% endif %}
             </div>
             
             <div class="color-strip"></div>
             
-            <!-- Детали -->
+            <!-- Детали запроса -->
             <div class="card mb-4">
                 <div class="card-header">
                     <i class="bi bi-info-circle"></i> Детали запроса
@@ -266,15 +242,15 @@
                 <div class="card-body">
                     <table class="table">
                         <tr>
-                            <th width="35%"><i class="bi bi-hash"></i> Номер запроса:</th>
+                            <th width="35%">Номер запроса:</th>
                             <td><strong>#{{ book_request.id }}</strong></td>
                         </tr>
                         <tr>
-                            <th><i class="bi bi-person"></i> Студент:</th>
+                            <th>Студент:</th>
                             <td>{{ book_request.student.full_name if book_request.student else 'Неизвестно' }}</td>
                         </tr>
                         <tr>
-                            <th><i class="bi bi-people"></i> Группа:</th>
+                            <th>Группа:</th>
                             <td>
                                 {% if book_request.student and book_request.student.group %}
                                     <span class="badge bg-secondary">
@@ -286,7 +262,7 @@
                             </td>
                         </tr>
                         <tr>
-                            <th><i class="bi bi-book"></i> Книга:</th>
+                            <th>Книга:</th>
                             <td>
                                 {% if book_request.book %}
                                     <strong>{{ book_request.book.name }}</strong><br>
@@ -297,9 +273,15 @@
                             </td>
                         </tr>
                         <tr>
-                            <th><i class="bi bi-hash"></i> Количество:</th>
+                            <th>Количество:</th>
+                            <td><span class="badge bg-primary">{{ book_request.quantity }}</span> экз.</td>
+                        </tr>
+                        <tr>
+                            <th>Экземпляры:</th>
                             <td>
-                                <span class="badge bg-primary">{{ book_request.quantity }}</span> экз.
+                                <div class="copy-codes">
+                                    {{ book_request.assigned_copy_codes }}
+                                </div>
                             </td>
                         </tr>
                     </table>
@@ -309,40 +291,37 @@
             <!-- Таймлайн -->
             <div class="card">
                 <div class="card-header">
-                    <i class="bi bi-calendar-event"></i> История статусов
+                    <i class="bi bi-calendar-event"></i> История
                 </div>
                 <div class="card-body">
                     <div class="timeline">
-                        <!-- Запрос создан -->
-                        <div class="timeline-item {% if book_request.status != 'ожидание' %}completed{% else %}active{% endif %}">
+                        <div class="timeline-item completed">
                             <strong>Запрос создан</strong>
                             <div class="text-muted small">
-                                {{ book_request.request_date.strftime('%d.%m.%Y %H:%M') if book_request.request_date else 'Дата не указана' }}
+                                {{ book_request.request_date.strftime('%d.%m.%Y %H:%M') }}
                             </div>
                         </div>
                         
-                        <!-- Выдано -->
                         {% if book_request.issue_date %}
-                        <div class="timeline-item {% if book_request.status == 'выдано' %}active{% elif book_request.status == 'возвращено' %}completed{% endif %}">
+                        <div class="timeline-item {% if book_request.status == 'выдано' %}active{% else %}completed{% endif %}">
                             <strong>Книга выдана</strong>
                             <div class="text-muted small">
-                                {{ book_request.issue_date.strftime('%d.%m.%Y %H:%M') if book_request.issue_date else 'Дата не указана' }}
+                                {{ book_request.issue_date.strftime('%d.%m.%Y %H:%M') }}
                             </div>
                             {% if book_request.planned_return_date %}
                             <div class="text-muted small">
                                 <i class="bi bi-calendar-check" style="color: var(--kit-green);"></i>
-                                Вернуть до: {{ book_request.planned_return_date.strftime('%d.%m.%Y %H:%M') }}
+                                Вернуть до: {{ book_request.planned_return_date.strftime('%d.%m.%Y') }}
                             </div>
                             {% endif %}
                         </div>
                         {% endif %}
                         
-                        <!-- Возвращено -->
                         {% if book_request.actual_return_date %}
                         <div class="timeline-item completed">
                             <strong>Книга возвращена</strong>
                             <div class="text-muted small">
-                                {{ book_request.actual_return_date.strftime('%d.%m.%Y %H:%M') if book_request.actual_return_date else 'Дата не указана' }}
+                                {{ book_request.actual_return_date.strftime('%d.%m.%Y %H:%M') }}
                             </div>
                         </div>
                         {% endif %}
@@ -352,7 +331,6 @@
             
             <div class="color-strip"></div>
             
-            <!-- Кнопки -->
             <div class="mt-4 text-center">
                 <a href="{{ url_for('check_status') }}" class="btn btn-outline-primary me-2">
                     <i class="bi bi-search"></i> Проверить другой запрос
@@ -362,19 +340,15 @@
                 </a>
             </div>
             
-            <!-- Автообновление (для ожидающих) -->
             {% if book_request.status == 'ожидание' %}
             <div class="mt-4 text-center">
-                <div class="alert alert-info" style="background: rgba(255, 107, 0, 0.1); border-color: var(--kit-orange);">
+                <div class="alert alert-info">
                     <i class="bi bi-arrow-clockwise" style="color: var(--kit-orange);"></i>
-                    <strong>Страница обновится автоматически при изменении статуса</strong>
+                    <strong>Страница обновится автоматически</strong>
                 </div>
             </div>
             <script>
-                // Автообновление каждые 30 секунд для ожидающих запросов
-                setTimeout(function() {
-                    location.reload();
-                }, 30000); // 30 секунд
+                setTimeout(() => location.reload(), 30000);
             </script>
             {% endif %}
         </div>
