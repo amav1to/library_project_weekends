@@ -10,3 +10,5 @@ MarkupSafe==3.0.3
 SQLAlchemy==2.0.44
 typing_extensions==4.15.0
 Werkzeug==3.1.4
+psycopg[binary,pool]==3.2.3
+sqlalchemy[postgresql]
