@@ -79,13 +79,13 @@ def get_students(group_id):
 
 @app.route('/request-book', methods=['POST'])
 def request_book():
-    """Создание запроса студентом — БЕЗ резервирования экземпляров"""
     try:
         student_id = request.form.get('student_id')
         book_id = request.form.get('book_id')
         quantity = int(request.form.get('quantity', 1))
         copy_codes_str = request.form.get('copy_codes', '').strip()
         
+        # Базовые проверки (как было)
         student = Student.query.get(student_id)
         if not student:
             return "Ошибка: Студент не найден", 400
@@ -97,30 +97,35 @@ def request_book():
         if quantity <= 0:
             return "Ошибка: Количество должно быть больше 0", 400
         
-        available = book.available_quantity
-        if quantity > available:
-            return f"Ошибка: Доступно только {available} экземпляров", 400
-        
         if book.language != student.group.language or book.course != student.group.course:
             return "Ошибка: Эта книга не для вашей группы", 400
         
-        # Проверка кодов экземпляров (только валидация, без резервирования)
+        # Проверка кодов экземпляров
         if not copy_codes_str:
-            return "Ошибка: Не прикреплены экземпляры (отсканируйте или введите коды)", 400
+            return "Ошибка: Не прикреплены экземпляры", 400
         
         codes_list = [c.strip() for c in copy_codes_str.split(',') if c.strip()]
         if len(codes_list) != quantity:
             return f"Ошибка: Прикреплено {len(codes_list)} экземпляров, ожидалось {quantity}", 400
         
+        # === НОВАЯ ПРОВЕРКА: все экземпляры должны быть свободны ===
+        conflicts = []
         for code in codes_list:
-            copy = BookCopy.query.filter_by(copy_code=code).first()
+            copy = BookCopy.query.filter_by(copy_code=code, book_id=book.id).first()
             if not copy:
-                return f"Ошибка: Экземпляр с кодом {code} не найден в системе", 400
-            if copy.book_id != book.id:
-                return f"Ошибка: Экземпляр {code} принадлежит другой книге", 400
-            # НЕ проверяем is_available — разрешаем выбирать даже занятые (библиотекарь решит)
+                conflicts.append(f"{code} (не найден)")
+                continue
+            if not copy.is_available:
+                # Находим, кому выдан (если есть запрос)
+                if not copy.is_available:
+                    conflicts.append(f"{code} (экземпляр уже выдан)")
+                    continue
         
-        # Генерация номера запроса
+        if conflicts:
+            conflict_msg = "; ".join(conflicts)
+            return f"Ошибка: Невозможно прикрепить: {conflict_msg}", 400
+        
+        # Генерация номера запроса (как было)
         today = datetime.now().strftime('%d%m%y')
         last_request = BookRequest.query.filter(
             BookRequest.request_number.like(f'{today}-%')
@@ -133,7 +138,7 @@ def request_book():
         
         request_number = f'{today}-{next_number:03d}'
         
-        # Создаём запрос БЕЗ привязки экземпляров
+        # Создаём запрос
         new_request = BookRequest(
             student_id=student_id,
             book_id=book_id,
@@ -141,12 +146,12 @@ def request_book():
             status='ожидание',
             request_date=datetime.now(),
             request_number=request_number,
-            requested_copy_codes = ','.join(codes_list)  # Сохраняем запрошенные коды
+            requested_copy_codes=','.join(codes_list)  # сохраняем коды
         )
         db.session.add(new_request)
         db.session.commit()
         
-        return f"✅ Запрос #{new_request.id} отправлен!"
+        return f"✅ Запрос #{new_request.id} отправлен! Ожидайте подтверждения библиотекаря."
         
     except Exception as e:
         db.session.rollback()
