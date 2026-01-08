@@ -94,9 +94,6 @@ def request_book():
         if not book:
             return "Ошибка: Книга не найдена", 400
         
-        if quantity <= 0:
-            return "Ошибка: Количество должно быть больше 0", 400
-        
         if book.language != student.group.language or book.course != student.group.course:
             return "Ошибка: Эта книга не для вашей группы", 400
         
@@ -408,6 +405,97 @@ def get_book_by_copy_code(copy_code):
     if copy and copy.book:
         return jsonify({'book_id': copy.book.id})
     return jsonify({'error': 'Not found'}), 404
+
+@app.route('/admin/scan-return/<int:request_id>', methods=['POST'])
+@admin_required
+def scan_return(request_id):
+    try:
+        data = request.get_json()
+        scanned_codes_str = data.get('copy_codes', '').strip()
+        if not scanned_codes_str:
+            return jsonify({'success': False, 'error': 'Не отсканированы коды экземпляров'}), 400
+        
+        scanned_codes = [c.strip() for c in scanned_codes_str.split(',') if c.strip()]
+        
+        book_request = BookRequest.query.get_or_404(request_id)
+        
+        if book_request.status != 'выдано':
+            return jsonify({'success': False, 'error': 'Запрос не в статусе "выдано"'}), 400
+        
+        # Получаем коды, которые были выданы по этому запросу
+        issued_codes_str = book_request.requested_copy_codes or book_request.attached_copy_codes or ''
+        if not issued_codes_str:
+            return jsonify({'success': False, 'error': 'У запроса нет записанных кодов экземпляров'}), 400
+        
+        issued_codes = [c.strip() for c in issued_codes_str.split(',') if c.strip()]
+        
+        # Сравниваем множества: количество и сами коды должны совпадать
+        if set(scanned_codes) != set(issued_codes):
+            return jsonify({
+                'success': False, 
+                'error': 'Отсканированные коды не совпадают с выданными по этому запросу'
+            }), 400
+        
+        # Всё совпадает — отмечаем возврат
+        book_request.status = 'возвращено'
+        book_request.actual_return_date = datetime.now()
+        
+        # Освобождаем экземпляры
+        BookCopy.query.filter(BookCopy.current_request_id == book_request.id).update({
+            'current_request_id': None,
+            'is_available': True
+        })
+        
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Возврат подтверждён'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+    
+@app.route('/search-books')
+def search_books():
+    query = request.args.get('q', '').strip()
+    group_id = request.args.get('group_id', type=int)
+    
+    if not group_id:
+        return jsonify([])
+    
+    group = Group.query.get(group_id)
+    if not group:
+        return jsonify([])
+    
+    # Выбираем книги только по языку и курсу (без фильтра по доступности)
+    books_query = Book.query.filter(
+        Book.language == group.language,
+        Book.course == group.course
+    )
+    
+    if query:
+        search_pattern = f"%{query}%"
+        books_query = books_query.filter(
+            db.or_(
+                Book.name.ilike(search_pattern),
+                Book.author.ilike(search_pattern)
+            )
+        )
+    
+    # Загружаем все подходящие книги
+    books = books_query.all()
+    
+    # Фильтруем в Python: оставляем только книги с доступными экземплярами
+    available_books = []
+    for book in books:
+        if book.available_quantity > 0:  # ← здесь используем property — это можно!
+            available_books.append({
+                'id': book.id,
+                'name': book.name,
+                'author': book.author,
+                'available': book.available_quantity
+            })
+    
+    return jsonify(available_books)
 
 if __name__ == '__main__':
     app.run(debug=True)

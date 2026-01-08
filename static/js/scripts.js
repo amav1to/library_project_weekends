@@ -6,120 +6,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const studentIdField = document.getElementById('student_id');
     const currentGroupIdField = document.getElementById('current_group_id');
     const studentSuggestions = document.getElementById('student-suggestions');
-    const quantityInput = document.getElementById('quantity');
     const clearStudentBtn = document.getElementById('clear-student');
-
-    // Переменные для сканера экземпляров у студента
+    
+    // Переменные для сканера
     let studentStream = null;
     let studentScanningInterval = null;
     let studentScannedCodes = new Set();
 
-    // === Сканер экземпляров для студента ===
-    window.openStudentScanner = function() {
-        const quantity = parseInt(quantityInput.value) || 1;
-        document.getElementById('studentAttachedCount').textContent = `Прикреплено экземпляров: 0 из ${quantity}`;
-        studentScannedCodes.clear();
-        document.getElementById('studentAttachedList').innerHTML = '';
-        document.getElementById('manualStudentCodes').value = '';
-
-        const modal = new bootstrap.Modal(document.getElementById('qrStudentScannerModal'));
-        modal.show();
-        startStudentScanner();
-    };
-
-    function startStudentScanner() {
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-            .then(stream => {
-                studentStream = stream;
-                const video = document.getElementById('qr-student-video');
-                video.srcObject = stream;
-                video.play();
-
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-
-                studentScanningInterval = setInterval(() => {
-                    if (video.readyState === video.HAVE_ENOUGH_DATA) {
-                        canvas.height = video.videoHeight;
-                        canvas.width = video.videoWidth;
-                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                        const code = jsQR(imageData.data, imageData.width, imageData.height);
-
-                        if (code) {
-                            const codeVal = code.data.trim();
-                            if (!studentScannedCodes.has(codeVal)) {
-                                studentScannedCodes.add(codeVal);
-                                const textarea = document.getElementById('manualStudentCodes');
-                                textarea.value += (textarea.value ? '\n' : '') + codeVal;
-                                updateStudentAttached();
-                            }
-                        }
-                    }
-                }, 300);
-            })
-            .catch(err => {
-                console.error('Ошибка камеры:', err);
-                alert('Не удалось получить доступ к камере. Проверьте разрешения.');
-            });
-    }
-
-    window.stopStudentScanner = function() {
-        if (studentStream) {
-            studentStream.getTracks().forEach(t => t.stop());
-            studentStream = null;
-        }
-        if (studentScanningInterval) {
-            clearInterval(studentScanningInterval);
-            studentScanningInterval = null;
-        }
-        const video = document.getElementById('qr-student-video');
-        if (video) video.srcObject = null;
-    }
-
-    function updateStudentAttached() {
-        const quantity = parseInt(quantityInput.value) || 1;
-        const codes = Array.from(studentScannedCodes);
-        document.getElementById('studentAttachedCount').textContent = `Прикреплено экземпляров: ${codes.length} из ${quantity}`;
-        document.getElementById('studentAttachedList').innerHTML = codes.map(c => `<div class="badge bg-success me-1 mb-1">${c}</div>`).join('');
-    }
-
-    // Синхронизация textarea
-    const manualCodesTextarea = document.getElementById('manualStudentCodes');
-    if (manualCodesTextarea) {
-        manualCodesTextarea.addEventListener('input', function() {
-            const lines = this.value.trim().split('\n').map(l => l.trim()).filter(l => l);
-            studentScannedCodes = new Set(lines);
-            updateStudentAttached();
-        });
-    }
-
-    // Обновление счётчика при изменении количества
-    if (quantityInput) {
-        quantityInput.addEventListener('change', updateStudentAttached);
-    }
-
-    // 1. Загрузка групп
-    function loadGroups() {
-        fetch('/get-groups')
-            .then(r => r.json())
-            .then(groups => {
-                groupSelect.innerHTML = '<option value="">-- Выберите группу --</option>';
-                groups.forEach(g => {
-                    const opt = document.createElement('option');
-                    opt.value = g.id;
-                    opt.textContent = g.name;
-                    groupSelect.appendChild(opt);
-                });
-            })
-            .catch(err => {
-                console.error(err);
-                groupSelect.innerHTML = '<option value="">Ошибка загрузки групп</option>';
-            });
-    }
+    // Загрузка групп
     loadGroups();
 
-    // 2. Выбор группы
+    // Выбор группы
     if (groupSelect) {
         groupSelect.addEventListener('change', function() {
             const groupId = this.value;
@@ -137,41 +34,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // 3. Загрузка книг
-    function loadBooks(groupId) {
-        fetch(`/get-books/${groupId}`)
-            .then(r => r.json())
-            .then(books => {
-                bookSelect.innerHTML = '<option value="">-- Выберите книгу --</option>';
-                if (books.length === 0) {
-                    bookSelect.innerHTML += '<option value="">Нет доступных книг</option>';
-                    return;
-                }
-                books.forEach(b => {
-                    const opt = document.createElement('option');
-                    opt.value = b.id;
-                    opt.textContent = `${b.name} (доступно: ${b.available})`;
-                    bookSelect.appendChild(opt);
-                });
-
-                // Ограничение количества
-                bookSelect.addEventListener('change', function() {
-                    const match = this.selectedOptions[0].text.match(/доступно:\s*(\d+)/);
-                    if (match && quantityInput) {
-                        const max = parseInt(match[1]);
-                        quantityInput.max = max;
-                        if (parseInt(quantityInput.value) > max) quantityInput.value = max;
-                        updateStudentAttached();
-                    }
-                });
-            })
-            .catch(err => {
-                console.error(err);
-                bookSelect.innerHTML = '<option value="">Ошибка загрузки книг</option>';
-            });
-    }
-
-    // 4. Поиск студентов
+    // Поиск студентов
     if (studentInput) {
         let timeout;
         studentInput.addEventListener('input', function() {
@@ -242,7 +105,7 @@ document.addEventListener('DOMContentLoaded', function() {
         studentSuggestions.innerHTML = `<div class="list-group-item list-group-item-warning">${msg}</div>`;
         studentSuggestions.style.display = 'block';
     }
-    
+
     // Очистка студента
     if (clearStudentBtn) {
         clearStudentBtn.addEventListener('click', () => {
@@ -252,7 +115,49 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // === Отправка формы (обновлённая с модальным окном ошибок) ===
+    // Загрузка групп
+    function loadGroups() {
+        fetch('/get-groups')
+            .then(r => r.json())
+            .then(groups => {
+                groupSelect.innerHTML = '<option value="">-- Выберите группу --</option>';
+                groups.forEach(g => {
+                    const opt = document.createElement('option');
+                    opt.value = g.id;
+                    opt.textContent = g.name;
+                    groupSelect.appendChild(opt);
+                });
+            })
+            .catch(err => {
+                console.error(err);
+                groupSelect.innerHTML = '<option value="">Ошибка загрузки групп</option>';
+            });
+    }
+
+    // Загрузка книг
+    function loadBooks(groupId) {
+        fetch(`/get-books/${groupId}`)
+            .then(r => r.json())
+            .then(books => {
+                bookSelect.innerHTML = '<option value="">-- Выберите книгу --</option>';
+                if (books.length === 0) {
+                    bookSelect.innerHTML += '<option value="">Нет доступных книг</option>';
+                    return;
+                }
+                books.forEach(b => {
+                    const opt = document.createElement('option');
+                    opt.value = b.id;
+                    opt.textContent = `${b.name} (доступно: ${b.available})`;
+                    bookSelect.appendChild(opt);
+                });
+            })
+            .catch(err => {
+                console.error(err);
+                bookSelect.innerHTML = '<option value="">Ошибка загрузки книг</option>';
+            });
+    }
+
+    // === Отправка формы ===
     const form = document.getElementById('bookRequestForm');
     if (form) {
         form.addEventListener('submit', function(e) {
@@ -268,56 +173,114 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            // Проверка экземпляров
-            const quantity = parseInt(quantityInput.value) || 1;
+            // Количество определяется по кодам
             const codes = Array.from(studentScannedCodes);
-
-            if (codes.length !== quantity) {
-                let word = 'экземпляров';
-                if (quantity === 1) word = 'экземпляр';
-                else if ([2, 3, 4].includes(quantity % 10) && !(quantity % 100 >= 11 && quantity % 100 <= 14)) word = 'экземпляра';
-
-                showError(`Вы должны прикрепить ровно ${quantity} ${word} (сейчас: ${codes.length})`);
+            if (codes.length === 0) {
+                showError('Прикрепите хотя бы один экземпляр');
                 return;
             }
 
-            // Заполняем скрытое поле
-            document.getElementById('copy_codes_hidden').value = codes.join(',');
-
-            const submitBtn = form.querySelector('button[type="submit"]');
-            const origText = submitBtn.textContent;
-            submitBtn.textContent = 'Отправка...';
-            submitBtn.disabled = true;
-
-            fetch('/request-book', {
-                method: 'POST',
-                body: new FormData(form)
-            })
-            .then(r => r.text().then(text => ({ ok: r.ok, text })))
-            .then(res => {
-                if (res.ok) {
-                    showSuccessModal(res.text);
-                    form.reset();
-                    studentIdField.value = '';
-                    currentGroupIdField.value = '';
-                    studentScannedCodes.clear();
-                    updateStudentAttached();
-                    // Скрываем возможные открытые модалки ошибок
-                    bootstrap.Modal.getInstance(document.getElementById('errorModal'))?.hide();
-                } else {
-                    showError(res.text || 'Произошла неизвестная ошибка на сервере');
-                }
-            })
-            .catch(err => {
-                showError('Ошибка отправки запроса: ' + err.message);
-            })
-            .finally(() => {
-                submitBtn.textContent = origText;
-                submitBtn.disabled = false;
-            });
+            // Показываем подтверждение
+            const confirmMessage = document.getElementById('confirmMessage');
+            confirmMessage.textContent = `Вы хотите привязать ${codes.length} книг к своему запросу?`;
+            const confirmModal = new bootstrap.Modal(document.getElementById('confirmQuantityModal'));
+            confirmModal.show();
         });
     }
 
+    // Подтверждение количества
+    document.getElementById('confirmQuantityBtn').addEventListener('click', function() {
+        bootstrap.Modal.getInstance(document.getElementById('confirmQuantityModal')).hide(); // Закрываем явно
+        const codes = Array.from(studentScannedCodes);
+        document.getElementById('copy_codes_hidden').value = codes.join(',');
+        document.getElementById('quantity_hidden').value = codes.length;
+
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const origText = submitBtn.textContent;
+        submitBtn.textContent = 'Отправка...';
+        submitBtn.disabled = true;
+
+        fetch('/request-book', {
+            method: 'POST',
+            body: new FormData(form)
+        })
+        .then(r => r.text().then(text => ({ ok: r.ok, text })))
+        .then(res => {
+            if (res.ok) {
+                showSuccessModal(res.text);
+                form.reset();
+                studentScannedCodes.clear();
+                updateStudentAttached();
+            } else {
+                showError(res.text || 'Ошибка сервера');
+            }
+        })
+        .catch(err => showError('Ошибка отправки: ' + err.message))
+        .finally(() => {
+            submitBtn.textContent = origText;
+            submitBtn.disabled = false;
+        });
+    });
+
+    function startStudentScanner() {
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+            .then(stream => {
+                studentStream = stream;
+                const video = document.getElementById('qr-student-video');
+                video.srcObject = stream;
+                video.play();
+
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+
+                studentScanningInterval = setInterval(() => {
+                    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                        canvas.height = video.videoHeight;
+                        canvas.width = video.videoWidth;
+                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+                        if (code) {
+                            const codeVal = code.data.trim();
+                            if (!studentScannedCodes.has(codeVal)) {
+                                studentScannedCodes.add(codeVal);
+                                const textarea = document.getElementById('manualStudentCodes');
+                                textarea.value += (textarea.value ? '\n' : '') + codeVal;
+                                updateStudentAttached();
+                            }
+                        }
+                    }
+                }, 300);
+            })
+            .catch(err => alert('Ошибка доступа к камере: ' + err));
+    }
+
+    window.stopStudentScanner = function() {
+        if (studentStream) {
+            studentStream.getTracks().forEach(t => t.stop());
+            studentStream = null;
+        }
+        if (studentScanningInterval) {
+            clearInterval(studentScanningInterval);
+            studentScanningInterval = null;
+        }
+    };
+
+    function updateStudentAttached() {
+        const codes = Array.from(studentScannedCodes);
+        document.getElementById('studentAttachedCount').textContent = `Прикреплено экземпляров: ${codes.length}`;
+        document.getElementById('studentAttachedList').innerHTML = codes.map(c => `<div class="badge bg-success me-1 mb-1">${c}</div>`).join('');
+    }
+
+    // Синхронизация ручного ввода
+    document.getElementById('manualStudentCodes').addEventListener('input', function() {
+        const lines = this.value.trim().split('\n').map(l => l.trim()).filter(l => l);
+        studentScannedCodes = new Set(lines);
+        updateStudentAttached();
+    });
+
+    // Функции ошибок/успеха
     function showError(msg) {
         const errorModalBody = document.getElementById('errorModalBody');
         if (errorModalBody) {
@@ -342,44 +305,138 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Кнопка "Проверить статус" в модальном окне успеха
-    document.getElementById('checkStatusBtn')?.addEventListener('click', function() {
+    document.getElementById('checkStatusBtn').addEventListener('click', function() {
         const el = document.getElementById('requestId');
-        const id = el?.dataset.fullNumber || '';
+        const id = el.dataset.fullNumber || '';
         window.location.href = '/check-status?request_id=' + encodeURIComponent(id);
     });
+    // Закрытие модального окна сканера с сохранением кодов
+    window.closeStudentScanner = function() {
+        stopStudentScanner();
+        updateMainAttached(); // Обновляем отображение на основной странице
+        bootstrap.Modal.getInstance(document.getElementById('qrStudentScannerModal')).hide();
+    };
 
-    // === Кнопки + и - для количества экземпляров ===
-    const decreaseBtn = document.getElementById('decrease-quantity');
-    const increaseBtn = document.getElementById('increase-quantity');
+    // Обновление отображения на основной странице
+    function updateMainAttached() {
+        const codes = Array.from(studentScannedCodes);
+        const block = document.getElementById('mainAttachedBlock');
+        const countEl = document.getElementById('mainAttachedCount');
+        const listEl = document.getElementById('mainAttachedList');
 
-    if (quantityInput && decreaseBtn && increaseBtn) {
-        // Увеличиваем
-        increaseBtn.addEventListener('click', function() {
-            let value = parseInt(quantityInput.value) || 1;
-            quantityInput.value = value + 1;
-            updateStudentAttached(); // Обновляем текст "Прикреплено: X из Y"
+        if (codes.length > 0) {
+            block.style.display = 'block';
+            countEl.textContent = `Прикреплено экземпляров: ${codes.length}`;
+            listEl.innerHTML = codes.map(c => `<div class="badge bg-success me-1 mb-1">${c}</div>`).join('');
+        } else {
+            block.style.display = 'none';
+        }
+    }
+
+    // При открытии сканера — восстанавливаем сохранённые коды
+    window.openStudentScanner = function() {
+        // Синхронизируем коды из textarea (если они уже введены)
+        syncCodesFromTextarea();
+
+        // Обновляем отображение
+        updateStudentAttached();  // внутри модалки
+        updateMainAttached();     // на основной странице
+
+        const modal = new bootstrap.Modal(document.getElementById('qrStudentScannerModal'));
+        modal.show();
+        startStudentScanner();
+    };
+
+    // После сканирования или ручного ввода — обновляем и внутри, и снаружи
+    function updateStudentAttached() {
+        const codes = Array.from(studentScannedCodes);
+        document.getElementById('studentAttachedCount').textContent = `Прикреплено экземпляров: ${codes.length}`;
+        document.getElementById('studentAttachedList').innerHTML = codes.map(c => `<div class="badge bg-success me-1 mb-1">${c}</div>`).join('');
+        updateMainAttached(); // Синхронизируем с основной страницей
+    }
+
+    function syncCodesFromTextarea() {
+        const textarea = document.getElementById('manualStudentCodes');
+        if (textarea) {
+            const lines = textarea.value.trim().split('\n').map(l => l.trim()).filter(l => l);
+            studentScannedCodes = new Set(lines);
+        }
+    }
+
+    // === Поиск книг ===
+    const bookSearchInput = document.getElementById('bookSearch');
+    const bookSuggestions = document.getElementById('book-suggestions');
+    const bookIdField = document.getElementById('book_id');
+
+    if (bookSearchInput) {
+        let searchTimeout;
+
+        function renderBookSuggestions(books) {
+            bookSuggestions.innerHTML = '';
+            // Header with matched count
+            const header = document.createElement('div');
+            header.className = 'list-group-item list-group-item-light';
+            header.textContent = `Найдено: ${books.length}`;
+            bookSuggestions.appendChild(header);
+
+            if (books.length === 0) {
+                bookSuggestions.innerHTML += '<div class="list-group-item text-muted">Книги не найдены</div>';
+            } else {
+                books.forEach(b => {
+                    const item = document.createElement('button');
+                    item.type = 'button';
+                    item.className = 'list-group-item list-group-item-action text-start';
+                    item.innerHTML = `
+                        <strong>${b.name}</strong><br>
+                        <small class="text-muted">${b.author} (доступно: ${b.available})</small>
+                    `;
+                    item.onclick = () => {
+                        bookSearchInput.value = b.name;
+                        bookIdField.value = b.id;
+                        bookSuggestions.style.display = 'none';
+                    };
+                    bookSuggestions.appendChild(item);
+                });
+            }
+            bookSuggestions.style.display = 'block';
+        }
+
+        function doBookSearch(query) {
+            const groupId = currentGroupIdField.value;
+            if (!groupId) {
+                bookSuggestions.innerHTML = '<div class="list-group-item list-group-item-warning">Сначала выберите группу</div>';
+                bookSuggestions.style.display = 'block';
+                return;
+            }
+
+            fetch(`/search-books?q=${encodeURIComponent(query)}&group_id=${groupId}`)
+                .then(r => r.json())
+                .then(books => renderBookSuggestions(books))
+                .catch(err => {
+                    console.error(err);
+                    bookSuggestions.innerHTML = '<div class="list-group-item text-danger">Ошибка поиска</div>';
+                    bookSuggestions.style.display = 'block';
+                });
+        }
+
+        bookSearchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            const query = this.value.trim();
+
+            searchTimeout = setTimeout(() => doBookSearch(query), 300);
         });
 
-        // Уменьшаем (не ниже 1)
-        decreaseBtn.addEventListener('click', function() {
-            let value = parseInt(quantityInput.value) || 1;
-            if (value > 1) {
-                quantityInput.value = value - 1;
-                updateStudentAttached();
+        // Показываем список при фокусе (показываем все книги группы)
+        bookSearchInput.addEventListener('focus', function() {
+            clearTimeout(searchTimeout);
+            doBookSearch('');
+        });
+
+        // Скрываем список при клике вне
+        document.addEventListener('click', e => {
+            if (!bookSearchInput.contains(e.target) && !bookSuggestions.contains(e.target)) {
+                bookSuggestions.style.display = 'none';
             }
         });
-
-        // Если пользователь вручную меняет значение в поле
-        quantityInput.addEventListener('change', function() {
-            let value = parseInt(this.value) || 1;
-            if (value < 1) {
-                this.value = 1;
-            }
-            updateStudentAttached();
-        });
-
-        // При загрузке страницы тоже обновляем счётчик
-        updateStudentAttached();
     }
 });

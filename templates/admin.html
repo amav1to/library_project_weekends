@@ -411,30 +411,30 @@
                             </td>
                             <td>
                                 {% if req.status == 'ожидание' %}
-                                    <button class="btn btn-info btn-sm action-btn" 
-                                        data-action="scan" 
-                                        data-id="{{ req.id }}"
-                                        title="Сканировать QR коды экземпляров">
-                                        <i class="bi bi-qr-code-scan"></i>
-                                    </button>
-                                    <button class="btn btn-success btn-sm action-btn" 
-                                        data-action="confirm" 
+                                    <button class="btn btn-success btn-sm action-btn"
+                                        data-action="confirm"
                                         data-id="{{ req.id }}"
                                         title="Подтвердить выдачу"
                                         style="background: var(--kit-green); border-color: var(--kit-green);">
                                         <i class="bi bi-check-lg"></i>
                                     </button>
                                     <button class="btn btn-danger btn-sm action-btn"
-                                        data-action="reject" 
+                                        data-action="reject"
                                         data-id="{{ req.id }}"
                                         title="Отклонить запрос">
                                         <i class="bi bi-x-lg"></i>
                                     </button>
                                 {% elif req.status == 'выдано' %}
-                                    <button class="btn btn-primary btn-sm action-btn"
-                                        data-action="return" 
+                                    <button class="btn btn-info btn-sm action-btn" 
+                                        data-action="scan-return"
                                         data-id="{{ req.id }}"
-                                        title="Отметить возврат"
+                                        title="Сканировать возврат">
+                                        <i class="bi bi-qr-code-scan"></i>
+                                    </button>
+                                    <button class="btn btn-primary btn-sm action-btn"
+                                        data-action="return"
+                                        data-id="{{ req.id }}"
+                                        title="Отметить возврат вручную"
                                         style="background: var(--kit-orange); border-color: var(--kit-orange);">
                                         <i class="bi bi-arrow-return-left"></i>
                                     </button>
@@ -572,6 +572,21 @@
                 startAdminScanner();
                 return;
             }
+
+            if (action === 'scan-return') {
+                currentScanRequestId = reqId;
+                currentScanQuantity = parseInt(button.closest('tr').querySelector('td:nth-child(5) span.badge').textContent.trim());
+                
+                // Очищаем предыдущие коды
+                adminScannedCodes.clear();
+                document.getElementById('manualCopyIds').value = '';
+                updateAdminAttached();
+                
+                const qrModal = new bootstrap.Modal(document.getElementById('qrScannerModal'));
+                qrModal.show();
+                startAdminScanner();
+                return;
+            }
             
             // Остальные действия (confirm, return, reject)
             currentAction = action;
@@ -680,7 +695,8 @@
                 return;
             }
             
-            fetch(`/admin/assign-copy-ids/${currentScanRequestId}`, {
+            // Вместо /admin/assign-copy-ids/...
+            fetch(`/admin/scan-return/${currentScanRequestId}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ copy_codes: codes.join(',') })
