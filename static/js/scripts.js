@@ -1,7 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Элементы формы
     const groupSelect = document.getElementById('group');
-    const bookSelect = document.getElementById('book');
     const studentInput = document.getElementById('student');
     const studentIdField = document.getElementById('student_id');
     const currentGroupIdField = document.getElementById('current_group_id');
@@ -131,29 +130,6 @@ document.addEventListener('DOMContentLoaded', function() {
             .catch(err => {
                 console.error(err);
                 groupSelect.innerHTML = '<option value="">Ошибка загрузки групп</option>';
-            });
-    }
-
-    // Загрузка книг
-    function loadBooks(groupId) {
-        fetch(`/get-books/${groupId}`)
-            .then(r => r.json())
-            .then(books => {
-                bookSelect.innerHTML = '<option value="">-- Выберите книгу --</option>';
-                if (books.length === 0) {
-                    bookSelect.innerHTML += '<option value="">Нет доступных книг</option>';
-                    return;
-                }
-                books.forEach(b => {
-                    const opt = document.createElement('option');
-                    opt.value = b.id;
-                    opt.textContent = `${b.name} (доступно: ${b.available})`;
-                    bookSelect.appendChild(opt);
-                });
-            })
-            .catch(err => {
-                console.error(err);
-                bookSelect.innerHTML = '<option value="">Ошибка загрузки книг</option>';
             });
     }
 
@@ -363,6 +339,19 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // Очистка поля поиска при смене группы
+    function loadBooks(groupId) {
+        const bookSearchInput = document.getElementById('bookSearch');
+        const bookSuggestions = document.getElementById('book-suggestions');
+        const bookIdField = document.getElementById('book_id');
+        
+        if (bookSearchInput) bookSearchInput.value = '';
+        if (bookIdField) bookIdField.value = '';
+        if (bookSuggestions) {
+            bookSuggestions.innerHTML = '';
+            bookSuggestions.style.display = 'none';
+        }
+    }
     // === Поиск книг ===
     const bookSearchInput = document.getElementById('bookSearch');
     const bookSuggestions = document.getElementById('book-suggestions');
