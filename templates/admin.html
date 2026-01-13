@@ -202,7 +202,6 @@
         #qr-video {
             width: 100%;
             height: auto;
-            transform: scaleX(-1); /* Отзеркаливание камеры */
         }
 
         .scanner-overlay {
@@ -214,7 +213,14 @@
             pointer-events: none;
             border: 2px solid rgba(255, 107, 0, 0.5);
             box-shadow: inset 0 0 0 1000px rgba(0, 0, 0, 0.3);
-            transform: scaleX(-1); /* Отзеркаливание оверлея */
+        }
+
+        /* Зеркало только на ПК и планшетах в ландшафте (ширина ≥768px) */
+        @media (min-width: 768px) {
+            #qr-video,
+            .scanner-overlay {
+                transform: scaleX(-1);
+            }
         }
 
         .attached-count {

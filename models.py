@@ -27,6 +27,7 @@ class Book(db.Model):
     total_quantity = db.Column(db.Integer, nullable=False)
     language = db.Column(db.String(10), nullable=False)
     course = db.Column(db.Integer, nullable=False)
+    publisher = db.Column(db.String(100), nullable=True)  # Издательство
     
     copies = db.relationship('BookCopy', backref='book', lazy=True, cascade="all, delete-orphan")
     

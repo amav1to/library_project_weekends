@@ -3,9 +3,51 @@ from config import Config
 from models import db, Group, Book, Student, BookRequest, BookCopy
 from datetime import datetime, timedelta
 from functools import wraps
+from sqlalchemy import or_, func
+import string
 
 # Пароль админа
 ADMIN_PASSWORD = "KitRulit"
+
+def contains_full_word(text, search_word):
+    """
+    Проверяет, начинается ли какое-то слово в тексте с введенного запроса (префиксный поиск).
+    Поиск без учета регистра. Можно вводить начало слова, но нельзя пропускать буквы в начале.
+    
+    Примеры:
+    - contains_full_word("Алгебра и геометрия", "а") -> True (слово начинается с "а")
+    - contains_full_word("Алгебра и геометрия", "ал") -> True
+    - contains_full_word("Алгебра и геометрия", "алгебра") -> True
+    - contains_full_word("Алгебра и геометрия", "лгебра") -> False (пропущена первая буква)
+    - contains_full_word("әскери және технологиялық", "ә") -> True
+    - contains_full_word("әскери және технологиялық", "әскери") -> True
+    - contains_full_word("әскери және технологиялық", "лғашқы") -> False (пропущены буквы в начале)
+    """
+    if not text or not search_word:
+        return False
+    
+    text_str = str(text)
+    search_str = str(search_word)
+    
+    # Приводим к нижнему регистру для сравнения
+    text_lower = text_str.lower()
+    search_lower = search_str.lower()
+    
+    # Разбиваем текст на слова
+    # Заменяем знаки препинания и специальные символы на пробелы
+    punctuation_chars = string.punctuation + '.,;:!?()[]{}'
+    # Добавляем специальные кавычки отдельно
+    special_chars = ['«', '»', '"', '"', "'", "'", '„', '"', '‚', "'"]
+    for punct in punctuation_chars:
+        text_lower = text_lower.replace(punct, ' ')
+    for char in special_chars:
+        text_lower = text_lower.replace(char, ' ')
+    
+    # Разбиваем на слова по пробелам
+    words = text_lower.split()
+    
+    # Проверяем, начинается ли какое-то слово с введенного запроса (префиксный поиск)
+    return any(word.startswith(search_lower) for word in words)
 
 def admin_required(f):
     @wraps(f)
@@ -35,9 +77,13 @@ def get_groups():
 def get_books(group_id):
     group = Group.query.get_or_404(group_id)
     
-    books = Book.query.filter_by(
-        language=group.language,
-        course=group.course
+    # Включаем книги для языка группы и книги для обеих языков ("both")
+    books = Book.query.filter(
+        or_(
+            Book.language == group.language,
+            Book.language == 'both'
+        ),
+        Book.course == group.course
     ).all()
     
     books_list = []
@@ -64,11 +110,22 @@ def search_students():
     if group_id and group_id != 'null' and group_id != '':
         students_query = students_query.filter_by(group_id=int(group_id))
     
-    students = students_query.filter(
-        Student.full_name.ilike(f'%{query}%')
-    ).limit(20).all()
+    # Поиск по полным словам, нечувствительный к регистру
+    # Используем регулярное выражение для поиска целых слов
+    # Экранируем специальные символы в запросе
+    import re
+    escaped_query = re.escape(query.lower())
+    # Создаем паттерн для поиска целого слова (с границами слов)
+    # Используем \b для границ слов, но в SQLite нужно использовать другой подход
+    # Для SQLite используем проверку на наличие слова с пробелами/знаками препинания вокруг
     
-    students_list = [{'id': s.id, 'name': s.full_name} for s in students]
+    # Получаем всех студентов и фильтруем в Python для более точного поиска
+    all_students = students_query.all()
+    
+    # Фильтруем по полным словам
+    filtered_students = [s for s in all_students if contains_full_word(s.full_name, query)]
+    
+    students_list = [{'id': s.id, 'name': s.full_name} for s in filtered_students[:20]]
     return jsonify(students_list)
 
 @app.route('/get-students/<int:group_id>')
@@ -94,7 +151,8 @@ def request_book():
         if not book:
             return "Ошибка: Книга не найдена", 400
         
-        if book.language != student.group.language or book.course != student.group.course:
+        # Проверяем язык: книга должна быть для языка группы или для обеих языков
+        if book.language not in [student.group.language, 'both'] or book.course != student.group.course:
             return "Ошибка: Эта книга не для вашей группы", 400
         
         # Проверка кодов экземпляров
@@ -388,7 +446,17 @@ def admin_filter():
             pass
     
     if search_query:
-        query = query.join(Student).filter(Student.full_name.ilike(f'%{search_query}%'))
+        # Поиск по полным словам в ФИО студента
+        all_requests = query.join(Student).all()
+        
+        # Фильтруем по полным словам
+        filtered_requests = [r for r in all_requests if contains_full_word(r.student.full_name, search_query)]
+        # Создаем новый запрос с отфильтрованными результатами
+        request_ids = [r.id for r in filtered_requests]
+        if request_ids:
+            query = BookRequest.query.filter(BookRequest.id.in_(request_ids))
+        else:
+            query = BookRequest.query.filter(BookRequest.id == -1)  # Нет результатов
     
     requests = query.order_by(BookRequest.request_date.desc()).all()
     
@@ -467,27 +535,30 @@ def search_books():
         return jsonify([])
     
     # Выбираем книги только по языку и курсу (без фильтра по доступности)
+    # Включаем книги для языка группы и книги для обеих языков ("both")
     books_query = Book.query.filter(
-        Book.language == group.language,
+        or_(
+            Book.language == group.language,
+            Book.language == 'both'
+        ),
         Book.course == group.course
     )
     
-    if query:
-        search_pattern = f"%{query}%"
-        books_query = books_query.filter(
-            db.or_(
-                Book.name.ilike(search_pattern),
-                Book.author.ilike(search_pattern)
-            )
-        )
-    
-    # Загружаем все подходящие книги
+    # Загружаем все подходящие книги (без фильтра по запросу пока)
     books = books_query.all()
     
-    # Фильтруем в Python: оставляем только книги с доступными экземплярами
+    # Фильтруем книги по запросу (если есть) и по доступности
     available_books = []
     for book in books:
-        if book.available_quantity > 0:  # ← здесь используем property — это можно!
+        # Если есть запрос, проверяем наличие полного слова в названии или авторе
+        if query:
+            name_match = contains_full_word(book.name, query)
+            author_match = contains_full_word(book.author, query)
+            if not (name_match or author_match):
+                continue
+        
+        # Проверяем доступность
+        if book.available_quantity > 0:
             available_books.append({
                 'id': book.id,
                 'name': book.name,
