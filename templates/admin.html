@@ -308,10 +308,7 @@
                         <label class="btn btn-outline-warning" for="date_yesterday"><i class="bi bi-moon"></i> Вчера</label>
                         
                         <div class="input-group" style="width: auto;">
-                            <input type="date" class="form-control" id="customDateInput" value="{{ custom_date }}" style="max-width: 150px;">
-                            <button class="btn btn-outline-info" type="button" onclick="applyCustomDate()">
-                                <i class="bi bi-calendar-check"></i>
-                            </button>
+                            <input type="date" class="form-control" id="customDateInput" value="{{ custom_date }}" style="max-width: 150px;" onchange="applyCustomDate()">
                         </div>
                     </div>
                 </div>
@@ -737,8 +734,6 @@
                 currentParams.set('date', 'custom');
                 currentParams.set('custom_date', v);
                 window.location.href = `/admin/filter?${currentParams.toString()}`;
-            } else {
-                alert('Выберите дату');
             }
         }
         
