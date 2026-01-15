@@ -1,9 +1,14 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Элементы формы
-    const groupSelect = document.getElementById('group');
+    const groupInput = document.getElementById('groupInput');
+    const groupSuggestions = document.getElementById('group-suggestions');
+    let groupsList = [];
+    // availableCopies holds copy_code strings (in numeric order) for the currently selected book
+    let availableCopies = [];
     const studentInput = document.getElementById('student');
     const studentIdField = document.getElementById('student_id');
     const currentGroupIdField = document.getElementById('current_group_id');
+    const groupIdHiddenField = document.getElementById('group_id_hidden');
     const studentSuggestions = document.getElementById('student-suggestions');
     const clearStudentBtn = document.getElementById('clear-student');
     
@@ -15,20 +20,76 @@ document.addEventListener('DOMContentLoaded', function() {
     // Загрузка групп
     loadGroups();
 
-    // Выбор группы
-    if (groupSelect) {
-        groupSelect.addEventListener('change', function() {
-            const groupId = this.value;
-            currentGroupIdField.value = groupId;
-            if (groupId) {
-                loadBooks(groupId);
-                studentInput.value = '';
-                studentIdField.value = '';
-            } else {
-                bookSelect.innerHTML = '<option value="">-- Сначала выберите группу --</option>';
-                studentSuggestions.style.display = 'none';
-                studentSuggestions.innerHTML = '';
+    // Выбор/поиск группы
+    function renderGroupSuggestions(groups, header) {
+        groupSuggestions.innerHTML = '';
+        if (!groups || groups.length === 0) {
+            groupSuggestions.innerHTML = '<div class="list-group-item text-muted">Группы не найдены</div>';
+        } else {
+            if (header) groupSuggestions.innerHTML = `<div class="list-group-item list-group-item-light">${header}</div>`;
+            groups.forEach(g => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'list-group-item list-group-item-action';
+                btn.textContent = g.name;
+                btn.dataset.groupId = g.id;
+                btn.addEventListener('click', () => {
+                    groupInput.value = g.name;
+                    currentGroupIdField.value = g.id;
+                    if (groupIdHiddenField) groupIdHiddenField.value = g.id;
+                    groupSuggestions.style.display = 'none';
+                    // Enable student input, reset selection; keep books disabled until student chosen
+                    if (studentInput) { studentInput.disabled = false; studentInput.value = ''; studentInput.placeholder = 'Например: Иванов Иван'; studentIdField.value = ''; }
+                    const bs = document.getElementById('bookSearch');
+                    if (bs) { bs.disabled = true; bs.value = ''; bs.placeholder = 'Сначала выберите ФИО'; document.getElementById('book_id').value = ''; }
+                    loadBooks(g.id);
+                });
+                groupSuggestions.appendChild(btn);
+            });
+        }
+        groupSuggestions.style.display = 'block';
+    }
+
+    if (groupInput) {
+        groupInput.addEventListener('input', function() {
+            const q = this.value.trim();
+            let results;
+            if (!q) {
+                // clear selected group when input is emptied
                 currentGroupIdField.value = '';
+                if (groupIdHiddenField) groupIdHiddenField.value = '';
+                if (studentInput) { studentInput.disabled = true; studentInput.value = ''; studentIdField.value = ''; studentInput.placeholder = 'Сначала выберите группу'; }
+                const bs = document.getElementById('bookSearch');
+                if (bs) { bs.disabled = true; bs.value = ''; bs.placeholder = 'Сначала выберите группу'; document.getElementById('book_id').value = ''; }
+                results = groupsList;
+            } else {
+                const qLower = q.toLowerCase();
+                if (/^\d+$/.test(q)) {
+                    // query is only digits -> match when any numeric part of group starts with the query
+                    results = groupsList.filter(g => {
+                        const nums = (g.name.match(/\d+/g) || []).map(n => n);
+                        return nums.some(n => n.startsWith(q));
+                    });
+                } else if (/^\d/.test(q)) {
+                    // starts with a digit but contains letters -> fallback to substring match
+                    results = groupsList.filter(g => g.name.toLowerCase().includes(qLower));
+                } else {
+                    // otherwise require startsWith (first letter mandatory) and case-insensitive
+                    results = groupsList.filter(g => g.name.toLowerCase().startsWith(qLower));
+                }
+            }
+            renderGroupSuggestions(results, q ? `Результаты "${q}":` : 'Все группы:');
+        });
+
+        groupInput.addEventListener('click', function() {
+            // Показываем все группы при клике
+            renderGroupSuggestions(groupsList, 'Все группы:');
+        });
+
+        // Скрываем при клике вне
+        document.addEventListener('click', e => {
+            if (!groupInput.contains(e.target) && (!groupSuggestions || !groupSuggestions.contains(e.target))) {
+                if (groupSuggestions) groupSuggestions.style.display = 'none';
             }
         });
     }
@@ -40,14 +101,24 @@ document.addEventListener('DOMContentLoaded', function() {
             clearTimeout(timeout);
             const query = this.value.trim();
             const groupId = currentGroupIdField.value;
+            const bs = document.getElementById('bookSearch');
+
             if (!groupId) {
                 showMessage('Сначала выберите группу');
                 return;
             }
+
+            // If student field cleared, clear selection and disable book input
             if (query === '') {
+                studentIdField.value = '';
+                if (bs) { bs.disabled = true; bs.value = ''; bs.placeholder = 'Сначала выберите ФИО'; document.getElementById('book_id').value = ''; }
                 loadAllStudents(groupId);
                 return;
             }
+
+            // While typing (not yet selected), books remain disabled
+            if (bs) { bs.disabled = true; bs.placeholder = 'Сначала выберите ФИО'; }
+
             timeout = setTimeout(() => searchStudents(query, groupId), 200);
         });
 
@@ -93,6 +164,22 @@ document.addEventListener('DOMContentLoaded', function() {
                     studentInput.value = s.name;
                     studentIdField.value = s.id;
                     studentSuggestions.style.display = 'none';
+                    // Enable book search now that a student is chosen
+                    const bs = document.getElementById('bookSearch');
+                    if (bs) {
+                        bs.disabled = false;
+                        bs.placeholder = 'Начните вводить название или автора...';
+                    }
+                    // If a book is already selected and we have available copies, enable quantity controls
+                    const qty = document.getElementById('copyQuantity');
+                    const qtyPlus = document.getElementById('qtyPlus');
+                    const qtyMinus = document.getElementById('qtyMinus');
+                    if (qty && availableCopies && availableCopies.length > 0) {
+                        qty.disabled = false;
+                        qtyPlus.disabled = false;
+                        qtyMinus.disabled = false;
+                        document.getElementById('qtyHint').textContent = `Доступно: ${availableCopies.length}. Выберите количество`;
+                    }
                 });
                 studentSuggestions.appendChild(btn);
             });
@@ -119,17 +206,13 @@ document.addEventListener('DOMContentLoaded', function() {
         fetch('/get-groups')
             .then(r => r.json())
             .then(groups => {
-                groupSelect.innerHTML = '<option value="">-- Выберите группу --</option>';
-                groups.forEach(g => {
-                    const opt = document.createElement('option');
-                    opt.value = g.id;
-                    opt.textContent = g.name;
-                    groupSelect.appendChild(opt);
-                });
+                groupsList = groups || [];
+                // сортируем по имени для удобства
+                groupsList.sort((a,b) => a.name.localeCompare(b.name, 'ru'));
             })
             .catch(err => {
                 console.error(err);
-                groupSelect.innerHTML = '<option value="">Ошибка загрузки групп</option>';
+                groupsList = [];
             });
     }
 
@@ -247,6 +330,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const codes = Array.from(studentScannedCodes);
         document.getElementById('studentAttachedCount').textContent = `Прикреплено экземпляров: ${codes.length}`;
         document.getElementById('studentAttachedList').innerHTML = codes.map(c => `<div class="badge bg-success me-1 mb-1">${c}</div>`).join('');
+        // update hidden fields and quantity input sync
+        const copyHidden = document.getElementById('copy_codes_hidden');
+        const qtyHidden = document.getElementById('quantity_hidden');
+        if (copyHidden) copyHidden.value = codes.join(',');
+        if (qtyHidden) qtyHidden.value = codes.length;
+        const qi = document.getElementById('copyQuantity');
+        if (qi) qi.value = codes.length;
     }
 
     // Синхронизация ручного ввода
@@ -266,6 +356,9 @@ document.addEventListener('DOMContentLoaded', function() {
         errorModal.show();
     }
 
+    // флаг: если успех был из отправки запроса — после закрытия модалки перезагружаем страницу
+    let successModalReloadOnClose = false;
+
     function showSuccessModal(message) {
         const match = message.match(/#(\d+)/);
         if (match) {
@@ -275,15 +368,31 @@ document.addEventListener('DOMContentLoaded', function() {
                 el.textContent = id;
                 el.dataset.fullNumber = id;
             }
-            new bootstrap.Modal(document.getElementById('successModal')).show();
+            successModalReloadOnClose = true;
+            const modalEl = document.getElementById('successModal');
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
         } else {
             alert(message);
         }
     }
 
+    // Если successModal закрылся — обновляем страницу (чтобы точно сбросить все поля)
+    const successModalElement = document.getElementById('successModal');
+    if (successModalElement) {
+        successModalElement.addEventListener('hidden.bs.modal', function () {
+            if (successModalReloadOnClose) {
+                // Полная перезагрузка страницы
+                window.location.reload();
+            }
+        });
+    }
+
     document.getElementById('checkStatusBtn').addEventListener('click', function() {
         const el = document.getElementById('requestId');
         const id = el.dataset.fullNumber || '';
+        // Если пользователь переходит на страницу статуса — не нужно перезагружать страницу после скрытия модалки
+        successModalReloadOnClose = false;
         window.location.href = '/check-status?request_id=' + encodeURIComponent(id);
     });
     // Закрытие модального окна сканера с сохранением кодов
@@ -329,6 +438,13 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('studentAttachedCount').textContent = `Прикреплено экземпляров: ${codes.length}`;
         document.getElementById('studentAttachedList').innerHTML = codes.map(c => `<div class="badge bg-success me-1 mb-1">${c}</div>`).join('');
         updateMainAttached(); // Синхронизируем с основной страницей
+        // update hidden fields and quantity input sync
+        const copyHidden = document.getElementById('copy_codes_hidden');
+        const qtyHidden = document.getElementById('quantity_hidden');
+        if (copyHidden) copyHidden.value = codes.join(',');
+        if (qtyHidden) qtyHidden.value = codes.length;
+        const qi = document.getElementById('copyQuantity');
+        if (qi) qi.value = codes.length;
     }
 
     function syncCodesFromTextarea() {
@@ -379,10 +495,52 @@ document.addEventListener('DOMContentLoaded', function() {
                         <strong>${b.name}</strong><br>
                         <small class="text-muted">${b.author} (доступно: ${b.available})</small>
                     `;
-                    item.onclick = () => {
+                    item.onclick = async () => {
                         bookSearchInput.value = b.name;
                         bookIdField.value = b.id;
                         bookSuggestions.style.display = 'none';
+
+                        // Fetch available copies for this book (sorted by numeric instance)
+                        try {
+                            const res = await fetch(`/get-available-copies/${b.id}`);
+                            if (res.ok) {
+                                availableCopies = await res.json();
+                            } else {
+                                availableCopies = [];
+                            }
+                        } catch (err) {
+                            console.error('Ошибка получения копий', err);
+                            availableCopies = [];
+                        }
+
+                        // Setup quantity control based on availability; only enable if student selected
+                        const qty = document.getElementById('copyQuantity');
+                        const qtyPlus = document.getElementById('qtyPlus');
+                        const qtyMinus = document.getElementById('qtyMinus');
+                        if (availableCopies.length === 0) {
+                            if (qty) { qty.value = 0; qty.min = 0; qty.max = 0; qty.disabled = true; }
+                            if (qtyPlus) qtyPlus.disabled = true;
+                            if (qtyMinus) qtyMinus.disabled = true;
+                            document.getElementById('qtyHint').textContent = 'Нет доступных экземпляров для выбранной книги';
+                            showMessage('Нет доступных экземпляров для выбранной книги');
+                        } else {
+                            if (qty) { qty.min = 0; qty.max = availableCopies.length; qty.value = 0; }
+                            if (studentIdField.value) {
+                                if (qty) qty.disabled = false;
+                                if (qtyPlus) qtyPlus.disabled = false;
+                                if (qtyMinus) qtyMinus.disabled = false;
+                                document.getElementById('qtyHint').textContent = `Доступно: ${availableCopies.length}. Выберите количество`;
+                            } else {
+                                if (qty) qty.disabled = true;
+                                if (qtyPlus) qtyPlus.disabled = true;
+                                if (qtyMinus) qtyMinus.disabled = true;
+                                document.getElementById('qtyHint').textContent = `Доступно: ${availableCopies.length}. Сначала выберите ФИО`;
+                            }
+                        }
+
+                        // Clear auto-assigned codes when selecting another book
+                        studentScannedCodes.clear();
+                        updateStudentAttached();
                     };
                     bookSuggestions.appendChild(item);
                 });
@@ -427,5 +585,53 @@ document.addEventListener('DOMContentLoaded', function() {
                 bookSuggestions.style.display = 'none';
             }
         });
+
+        // Quantity controls
+        const qtyInput = document.getElementById('copyQuantity');
+        const qtyPlusBtn = document.getElementById('qtyPlus');
+        const qtyMinusBtn = document.getElementById('qtyMinus');
+
+        function assignCopiesByQuantity(n) {
+            // n is desired number; choose first n available copies in numeric order
+            if (!availableCopies || availableCopies.length === 0 || n <= 0) {
+                studentScannedCodes = new Set();
+                updateStudentAttached();
+                return;
+            }
+            if (n > availableCopies.length) n = availableCopies.length;
+            const selected = availableCopies.slice(0, n);
+            studentScannedCodes = new Set(selected);
+            updateStudentAttached();
+        }
+
+        if (qtyPlusBtn && qtyMinusBtn && qtyInput) {
+            qtyPlusBtn.addEventListener('click', () => {
+                let val = parseInt(qtyInput.value || '0', 10);
+                const max = parseInt(qtyInput.max || '0', 10);
+                if (val < max) {
+                    val++;
+                    qtyInput.value = val;
+                    assignCopiesByQuantity(val);
+                }
+            });
+
+            qtyMinusBtn.addEventListener('click', () => {
+                let val = parseInt(qtyInput.value || '0', 10);
+                if (val > 0) {
+                    val--;
+                    qtyInput.value = val;
+                    assignCopiesByQuantity(val);
+                }
+            });
+
+            qtyInput.addEventListener('input', () => {
+                let val = parseInt(qtyInput.value || '0', 10);
+                if (isNaN(val) || val < 0) val = 0;
+                const max = parseInt(qtyInput.max || '0', 10);
+                if (val > max) val = max;
+                qtyInput.value = val;
+                assignCopiesByQuantity(val);
+            });
+        }
     }
 });

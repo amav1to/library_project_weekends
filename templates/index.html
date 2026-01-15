@@ -168,7 +168,7 @@
             margin-top: 2rem;
         }
        
-        #student-suggestions {
+        #student-suggestions, #group-suggestions {
             position: absolute;
             z-index: 1000;
             width: 100%;
@@ -181,7 +181,7 @@
             margin-top: 0.25rem;
         }
         
-        #student-suggestions .list-group-item {
+        #student-suggestions .list-group-item, #group-suggestions .list-group-item {
             border: none;
             padding: clamp(0.625rem, 2vw, 0.75rem) clamp(0.75rem, 2.5vw, 1rem);
             border-bottom: 1px solid #f0f0f0;
@@ -189,7 +189,7 @@
             line-height: 1.5;
         }
        
-        #student-suggestions .list-group-item:hover {
+        #student-suggestions .list-group-item:hover, #group-suggestions .list-group-item:hover {
             background-color: rgba(255, 107, 0, 0.1);
             color: var(--kit-orange);
         }
@@ -419,13 +419,18 @@
             <form method="POST" action="/request-book" id="bookRequestForm">
                 <!-- Выбор группы -->
                 <div class="mb-4">
-                    <label for="group" class="form-label">
+                    <label for="groupInput" class="form-label">
                         <i class="bi bi-people-fill"></i> Ваша группа:
                     </label>
-                    <select class="form-select" id="group" name="group_id" required>
-                        <option value="">-- Выберите группу из списка --</option>
-                    </select>
+                    <div class="input-group">
+                        <span class="input-group-text" style="background: rgba(255, 107, 0, 0.1); border-color: #e0e0e0;">
+                            <i class="bi bi-people" style="color: var(--kit-orange);"></i>
+                        </span>
+                        <input type="text" class="form-control" id="groupInput" placeholder="Начните вводить название группы или кликните для списка..." autocomplete="off">
+                    </div>
+                    <div id="group-suggestions" class="list-group mt-2" style="display: none;"></div>
                     <input type="hidden" id="current_group_id" name="current_group_id">
+                    <input type="hidden" id="group_id_hidden" name="group_id">
                 </div>
                 <!-- Поиск студента -->
                 <div class="mb-4">
@@ -437,13 +442,10 @@
                             <i class="bi bi-person" style="color: var(--kit-orange);"></i>
                         </span>
                         <input type="text" class="form-control" id="student"
-                            placeholder="Например: Иванов Иван"
-                            autocomplete="off">
+                            placeholder="Сначала выберите группу"
+                            autocomplete="off" disabled>
                     </div>
                     <input type="hidden" name="student_id" id="student_id" required>
-                    <div class="form-text text-muted d-none d-md-block">
-                        <i class="bi bi-lightbulb"></i> Выберите себя из появившегося списка
-                    </div>
                    
                     <div id="student-suggestions" class="list-group mt-2" style="display: none;">
                     </div>
@@ -461,30 +463,35 @@
                         <input type="text" 
                             class="form-control" 
                             id="bookSearch" 
-                            placeholder="Начните вводить название или автора..." 
-                            autocomplete="off">
+                            placeholder="Сначала выберите группу" 
+                            autocomplete="off" disabled>
                     </div>
                     <input type="hidden" name="book_id" id="book_id" required>
-                    
-                    <div class="form-text text-muted d-none d-md-block">
-                        <i class="bi bi-lightbulb"></i> Введите часть названия или автора — поиск работает по всем буквам, независимо от регистра
-                    </div>
                     
                     <!-- Список результатов поиска -->
                     <div id="book-suggestions" class="list-group mt-2" style="display: none; max-height: 300px; overflow-y: auto; border: 2px solid var(--kit-orange); border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
                     </div>
                 </div>
                
-                <!-- Кнопка для открытия модального окна сканера -->
+                <!-- Кнопка для открытия модального окна сканера и выбор количества -->
                 <div class="mb-4">
                     <label class="form-label">
                         <i class="bi bi-hash"></i> Экземпляры:
                     </label>
+
+                    <div class="d-flex align-items-center mb-2" style="gap: 8px; max-width: 320px;">
+                        <div class="input-group">
+                            <button class="btn btn-outline-secondary" type="button" id="qtyMinus">-</button>
+                            <input type="number" class="form-control text-center" id="copyQuantity" value="0" min="0" step="1" disabled style="max-width: 110px;">
+                            <button class="btn btn-outline-secondary" type="button" id="qtyPlus">+</button>
+                        </div>
+                    </div>
+
                     <button type="button" class="btn btn-info" onclick="openStudentScanner()">
                         <i class="bi bi-qr-code-scan"></i> Отсканировать / Ввести коды
                     </button>
                     <div class="form-text text-muted mt-2">
-                        <i class="bi bi-info-circle"></i> Отсканируйте или введите коды экземпляров
+                        <i class="bi bi-info-circle"></i> Отсканируйте или введите коды экземпляров вручную (будут объединены с автоматическим выбором)
                     </div>
                 </div>
                

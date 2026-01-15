@@ -11,30 +11,30 @@
             --kit-orange: #ff6b00;
             --kit-green: #4CAF50;
         }
-        
+       
         body {
             background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
             min-height: 100vh;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        
+       
         .kit-header {
             background: linear-gradient(90deg, var(--kit-orange) 0%, #ff8c00 100%);
             padding: 1rem 0;
             box-shadow: 0 4px 12px rgba(255, 107, 0, 0.15);
         }
-        
+       
         .kit-logo {
             font-size: 2rem;
             font-weight: 700;
             color: white;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
         }
-        
+       
         .kit-logo span {
             color: var(--kit-green);
         }
-        
+       
         .status-card {
             max-width: 700px;
             margin: 0 auto;
@@ -45,44 +45,44 @@
             border-top: 5px solid var(--kit-orange);
             animation: fadeIn 0.6s ease-out;
         }
-        
+       
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        
+       
         .status-icon {
             font-size: 4rem;
             margin-bottom: 1.5rem;
         }
-        
+       
         .status-badge {
             font-size: 1.1rem;
             padding: 0.6em 1.2em;
             border-radius: 25px;
             font-weight: 600;
         }
-        
-        .status-waiting { 
+       
+        .status-waiting {
             background: linear-gradient(90deg, #ffc107 0%, #ffdb4d 100%);
             color: #856404;
         }
-        .status-issued { 
+        .status-issued {
             background: linear-gradient(90deg, var(--kit-orange) 0%, #ff8c00 100%);
             color: white;
         }
-        .status-returned { 
+        .status-returned {
             background: linear-gradient(90deg, var(--kit-green) 0%, #5cb85c 100%);
             color: white;
         }
-        
+       
         .card {
             border: none;
             border-radius: 12px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.05);
             margin-bottom: 1.5rem;
         }
-        
+       
         .card-header {
             background: linear-gradient(90deg, rgba(255, 107, 0, 0.1) 0%, rgba(255, 140, 0, 0.1) 100%);
             border-bottom: 2px solid rgba(255, 107, 0, 0.2);
@@ -90,14 +90,14 @@
             font-weight: 600;
             padding: 1rem 1.5rem;
         }
-        
+       
         .table th {
             color: var(--kit-orange);
             font-weight: 600;
             border-bottom: 2px solid rgba(255, 107, 0, 0.1);
             background-color: rgba(255, 107, 0, 0.05);
         }
-        
+       
         .btn-primary {
             background: linear-gradient(90deg, var(--kit-orange) 0%, #ff8c00 100%);
             border: none;
@@ -105,12 +105,12 @@
             padding: 0.75rem 1.5rem;
             font-weight: 600;
         }
-        
+       
         .btn-primary:hover {
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(255, 107, 0, 0.3);
         }
-        
+       
         .btn-outline-primary {
             border: 2px solid var(--kit-orange);
             color: var(--kit-orange);
@@ -118,18 +118,18 @@
             padding: 0.75rem 1.5rem;
             font-weight: 600;
         }
-        
+       
         .btn-outline-primary:hover {
             background-color: var(--kit-orange);
             color: white;
         }
-        
+       
         .timeline {
             position: relative;
             padding-left: 30px;
             margin: 20px 0;
         }
-        
+       
         .timeline::before {
             content: '';
             position: absolute;
@@ -139,13 +139,13 @@
             width: 3px;
             background: linear-gradient(to bottom, var(--kit-orange) 0%, var(--kit-green) 100%);
         }
-        
+       
         .timeline-item {
             position: relative;
             margin-bottom: 25px;
             padding-left: 15px;
         }
-        
+       
         .timeline-item::before {
             content: '';
             position: absolute;
@@ -158,24 +158,24 @@
             border: 3px solid white;
             box-shadow: 0 0 0 2px #adb5bd;
         }
-        
+       
         .timeline-item.active::before {
             background-color: var(--kit-orange);
             box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.3);
         }
-        
+       
         .timeline-item.completed::before {
             background-color: var(--kit-green);
             box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.3);
         }
-        
+       
         .color-strip {
             height: 5px;
             background: linear-gradient(90deg, var(--kit-orange) 0%, var(--kit-green) 100%);
             border-radius: 5px;
             margin: 1.5rem 0;
         }
-        
+       
         .copy-codes {
             font-family: monospace;
             font-size: 1.1em;
@@ -187,6 +187,14 @@
     </style>
 </head>
 <body>
+    <!-- Данные для JavaScript -->
+    <div id="requestData" 
+         data-request-id="{{ book_request.id }}"
+         data-initial-status="{{ book_request.status }}"
+         data-last-modified="{{ book_request.actual_return_date.isoformat() if book_request.actual_return_date else (book_request.issue_date.isoformat() if book_request.issue_date else book_request.request_date.isoformat()) }}"
+         style="display:none;">
+    </div>
+
     <header class="kit-header">
         <div class="container">
             <div class="text-center">
@@ -197,7 +205,7 @@
             </div>
         </div>
     </header>
-    
+   
     <div class="container">
         <div class="status-card">
             <div class="text-center mb-4">
@@ -206,34 +214,34 @@
                 </h3>
                 <p class="text-muted">Детали вашего запроса</p>
             </div>
-            
+           
             <!-- Статус -->
-            <div class="text-center mb-5">
+            <div class="text-center mb-5" id="statusSection">
                 {% if book_request.status == 'ожидание' %}
-                    <div class="status-icon" style="color: #ffc107;">
+                    <div class="status-icon" style="color: #ffc107;" id="statusIcon">
                         <i class="bi bi-clock-history"></i>
                     </div>
-                    <h4><span class="badge status-badge status-waiting">Ожидание подтверждения</span></h4>
-                    <p class="text-muted">Запрос обрабатывается библиотекарем</p>
-                    
+                    <h4><span class="badge status-badge status-waiting" id="statusBadge">Ожидание подтверждения</span></h4>
+                    <p class="text-muted" id="statusDescription">Запрос обрабатывается библиотекарем</p>
+                   
                 {% elif book_request.status == 'выдано' %}
-                    <div class="status-icon" style="color: var(--kit-orange);">
+                    <div class="status-icon" style="color: var(--kit-orange);" id="statusIcon">
                         <i class="bi bi-check-circle"></i>
                     </div>
-                    <h4><span class="badge status-badge status-issued">Книга выдана</span></h4>
-                    <p class="text-muted">Вы можете забрать книгу в библиотеке</p>
-                    
+                    <h4><span class="badge status-badge status-issued" id="statusBadge">Книга выдана</span></h4>
+                    <p class="text-muted" id="statusDescription">Вы можете забрать книгу в библиотеке</p>
+                   
                 {% elif book_request.status == 'возвращено' %}
-                    <div class="status-icon" style="color: var(--kit-green);">
+                    <div class="status-icon" style="color: var(--kit-green);" id="statusIcon">
                         <i class="bi bi-arrow-return-left"></i>
                     </div>
-                    <h4><span class="badge status-badge status-returned">Книга возвращена</span></h4>
-                    <p class="text-muted">Спасибо за возврат!</p>
+                    <h4><span class="badge status-badge status-returned" id="statusBadge">Книга возвращена</span></h4>
+                    <p class="text-muted" id="statusDescription">Спасибо за возврат!</p>
                 {% endif %}
             </div>
-            
+           
             <div class="color-strip"></div>
-            
+           
             <!-- Детали запроса -->
             <div class="card mb-4">
                 <div class="card-header">
@@ -279,7 +287,7 @@
                         <tr>
                             <th>Экземпляры:</th>
                             <td>
-                                <div class="copy-codes">
+                                <div class="copy-codes" id="copyCodes">
                                     {{ book_request.assigned_copy_codes }}
                                 </div>
                             </td>
@@ -287,40 +295,40 @@
                     </table>
                 </div>
             </div>
-            
+           
             <!-- Таймлайн -->
             <div class="card">
                 <div class="card-header">
                     <i class="bi bi-calendar-event"></i> История
                 </div>
                 <div class="card-body">
-                    <div class="timeline">
+                    <div class="timeline" id="timelineContainer">
                         <div class="timeline-item completed">
                             <strong>Запрос создан</strong>
-                            <div class="text-muted small">
+                            <div class="text-muted small" id="requestDate">
                                 {{ book_request.request_date.strftime('%d.%m.%Y %H:%M') }}
                             </div>
                         </div>
-                        
+                       
                         {% if book_request.issue_date %}
-                        <div class="timeline-item {% if book_request.status == 'выдано' %}active{% else %}completed{% endif %}">
+                        <div class="timeline-item {{ 'active' if book_request.status == 'выдано' else 'completed' }}" id="issueTimelineItem">
                             <strong>Книга выдана</strong>
-                            <div class="text-muted small">
+                            <div class="text-muted small" id="issueDate">
                                 {{ book_request.issue_date.strftime('%d.%m.%Y %H:%M') }}
                             </div>
                             {% if book_request.planned_return_date %}
-                            <div class="text-muted small">
+                            <div class="text-muted small" id="plannedReturnDate">
                                 <i class="bi bi-calendar-check" style="color: var(--kit-green);"></i>
                                 Вернуть до: {{ book_request.planned_return_date.strftime('%d.%m.%Y') }}
                             </div>
                             {% endif %}
                         </div>
                         {% endif %}
-                        
+                       
                         {% if book_request.actual_return_date %}
-                        <div class="timeline-item completed">
+                        <div class="timeline-item completed" id="returnTimelineItem">
                             <strong>Книга возвращена</strong>
-                            <div class="text-muted small">
+                            <div class="text-muted small" id="returnDate">
                                 {{ book_request.actual_return_date.strftime('%d.%m.%Y %H:%M') }}
                             </div>
                         </div>
@@ -328,9 +336,9 @@
                     </div>
                 </div>
             </div>
-            
+           
             <div class="color-strip"></div>
-            
+           
             <div class="mt-4 text-center">
                 <a href="{{ url_for('check_status') }}" class="btn btn-outline-primary me-2">
                     <i class="bi bi-search"></i> Проверить другой запрос
@@ -339,19 +347,302 @@
                     <i class="bi bi-house"></i> На главную
                 </a>
             </div>
-            
-            {% if book_request.status == 'ожидание' %}
-            <div class="mt-4 text-center">
-                <div class="alert alert-info">
-                    <i class="bi bi-arrow-clockwise" style="color: var(--kit-orange);"></i>
-                    <strong>Страница обновится автоматически</strong>
-                </div>
-            </div>
-            <script>
-                setTimeout(() => location.reload(), 30000);
-            </script>
-            {% endif %}
         </div>
     </div>
+   
+    <script>
+        (function() {
+            // Читаем данные из data-атрибутов
+            const dataEl = document.getElementById('requestData');
+            const requestId = parseInt(dataEl.dataset.requestId);
+            const initialStatus = dataEl.dataset.initialStatus;
+            const lastModifiedStr = dataEl.dataset.lastModified;
+            
+            let lastModified = lastModifiedStr ? new Date(lastModifiedStr) : null;
+            let pollingInterval = null;
+            let isPolling = false;
+           
+            // Функция для форматирования даты
+            function formatDate(dateString) {
+                if (!dateString) return '';
+                const date = new Date(dateString);
+                const day = String(date.getDate()).padStart(2, '0');
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const year = date.getFullYear();
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                return `${day}.${month}.${year} ${hours}:${minutes}`;
+            }
+           
+            function formatDateOnly(dateString) {
+                if (!dateString) return '';
+                const date = new Date(dateString);
+                const day = String(date.getDate()).padStart(2, '0');
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const year = date.getFullYear();
+                return `${day}.${month}.${year}`;
+            }
+           
+            // Функция для обновления статуса на странице
+            function updateStatus(data) {
+                const statusSection = document.getElementById('statusSection');
+                const statusIcon = document.getElementById('statusIcon');
+                const statusBadge = document.getElementById('statusBadge');
+                const statusDescription = document.getElementById('statusDescription');
+               
+                // Обновляем иконку и статус
+                let iconClass, iconColor, badgeClass, badgeText, description;
+               
+                if (data.status === 'ожидание') {
+                    iconClass = 'bi-clock-history';
+                    iconColor = '#ffc107';
+                    badgeClass = 'status-waiting';
+                    badgeText = 'Ожидание подтверждения';
+                    description = 'Запрос обрабатывается библиотекарем';
+                } else if (data.status === 'выдано') {
+                    iconClass = 'bi-check-circle';
+                    iconColor = 'var(--kit-orange)';
+                    badgeClass = 'status-issued';
+                    badgeText = 'Книга выдана';
+                    description = 'Вы можете забрать книгу в библиотеке';
+                } else if (data.status === 'возвращено') {
+                    iconClass = 'bi-arrow-return-left';
+                    iconColor = 'var(--kit-green)';
+                    badgeClass = 'status-returned';
+                    badgeText = 'Книга возвращена';
+                    description = 'Спасибо за возврат!';
+                }
+               
+                statusIcon.innerHTML = `<i class="bi ${iconClass}"></i>`;
+                statusIcon.style.color = iconColor;
+                statusBadge.className = `badge status-badge ${badgeClass}`;
+                statusBadge.textContent = badgeText;
+                statusDescription.textContent = description;
+               
+                // Обновляем коды экземпляров
+                if (data.assigned_copy_codes) {
+                    const copyCodesEl = document.getElementById('copyCodes');
+                    if (copyCodesEl) {
+                        copyCodesEl.textContent = data.assigned_copy_codes.replace(/,/g, ', ');
+                    }
+                }
+               
+                // Обновляем timeline
+                updateTimeline(data);
+            }
+           
+            // Функция для обновления timeline
+            function updateTimeline(data) {
+                const timelineContainer = document.getElementById('timelineContainer');
+               
+                // Обновляем дату запроса
+                if (data.request_date) {
+                    const requestDateEl = document.getElementById('requestDate');
+                    if (requestDateEl) {
+                        requestDateEl.textContent = formatDate(data.request_date);
+                    }
+                }
+               
+                // Если есть issue_date, обновляем или добавляем элемент "Книга выдана"
+                if (data.issue_date) {
+                    let issueItem = document.getElementById('issueTimelineItem');
+                    if (!issueItem) {
+                        // Создаем новый элемент
+                        issueItem = document.createElement('div');
+                        issueItem.id = 'issueTimelineItem';
+                        issueItem.className = 'timeline-item';
+                        const requestItem = timelineContainer.querySelector('.timeline-item');
+                        requestItem.insertAdjacentElement('afterend', issueItem);
+                    }
+                   
+                    issueItem.className = data.status === 'выдано' ? 'timeline-item active' : 'timeline-item completed';
+                   
+                    let issueDateEl = document.getElementById('issueDate');
+                    if (!issueDateEl) {
+                        issueDateEl = document.createElement('div');
+                        issueDateEl.id = 'issueDate';
+                        issueDateEl.className = 'text-muted small';
+                        issueItem.innerHTML = '<strong>Книга выдана</strong>';
+                        issueItem.appendChild(issueDateEl);
+                    }
+                    issueDateEl.textContent = formatDate(data.issue_date);
+                   
+                    // Обновляем planned_return_date
+                    if (data.planned_return_date) {
+                        let plannedReturnEl = document.getElementById('plannedReturnDate');
+                        if (!plannedReturnEl) {
+                            plannedReturnEl = document.createElement('div');
+                            plannedReturnEl.id = 'plannedReturnDate';
+                            plannedReturnEl.className = 'text-muted small';
+                            issueItem.appendChild(plannedReturnEl);
+                        }
+                        plannedReturnEl.innerHTML = `<i class="bi bi-calendar-check" style="color: var(--kit-green);"></i> Вернуть до: ${formatDateOnly(data.planned_return_date)}`;
+                    }
+                }
+               
+                // Если есть actual_return_date, обновляем или добавляем элемент "Книга возвращена"
+                if (data.actual_return_date) {
+                    let returnItem = document.getElementById('returnTimelineItem');
+                    if (!returnItem) {
+                        // Создаем новый элемент
+                        returnItem = document.createElement('div');
+                        returnItem.id = 'returnTimelineItem';
+                        returnItem.className = 'timeline-item completed';
+                        timelineContainer.appendChild(returnItem);
+                    }
+                   
+                    let returnDateEl = document.getElementById('returnDate');
+                    if (!returnDateEl) {
+                        returnDateEl = document.createElement('div');
+                        returnDateEl.id = 'returnDate';
+                        returnDateEl.className = 'text-muted small';
+                        returnItem.innerHTML = '<strong>Книга возвращена</strong>';
+                        returnItem.appendChild(returnDateEl);
+                    }
+                    returnDateEl.textContent = formatDate(data.actual_return_date);
+                }
+            }
+           
+            // Функция для проверки изменений (легкий запрос)
+            function checkForUpdates() {
+                if (isPolling) return; // Предотвращаем параллельные запросы
+                isPolling = true;
+               
+                fetch(`/api/request-last-modified/${requestId}`)
+                    .then(response => {
+                        if (response.status === 404) {
+                            // Запрос удален (отклонен)
+                            isPolling = false;
+                            handleRequestDeleted();
+                            return null;
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        isPolling = false;
+                       
+                        if (!data) return;
+                       
+                        if (!data.found) {
+                            // Запрос удален (отклонен)
+                            stopPolling();
+                            handleRequestDeleted();
+                            return;
+                        }
+                       
+                        const newLastModified = data.last_modified ? new Date(data.last_modified) : null;
+                       
+                        // Если дата изменилась, загружаем полные данные
+                        if (newLastModified && (!lastModified || newLastModified.getTime() !== lastModified.getTime())) {
+                            lastModified = newLastModified;
+                            fetchFullStatus();
+                        } else if (data.status !== getCurrentStatus()) {
+                            // Статус изменился, но дата не обновилась (редкий случай)
+                            fetchFullStatus();
+                        }
+                       
+                        // Если статус стал "возвращено", останавливаем polling
+                        if (data.status === 'возвращено') {
+                            stopPolling();
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Ошибка при проверке обновлений:', error);
+                        isPolling = false;
+                    });
+            }
+           
+            // Функция для получения полных данных и обновления страницы
+            function fetchFullStatus() {
+                fetch(`/api/request-status/${requestId}`)
+                    .then(response => {
+                        if (response.status === 404) {
+                            // Запрос был удален (отклонен)
+                            handleRequestDeleted();
+                            return null;
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (!data) return;
+                       
+                        if (data.found) {
+                            const oldStatus = getCurrentStatus();
+                            updateStatus(data);
+                           
+                            // Если статус изменился с "ожидание" на "выдано", меняем интервал polling
+                            if (oldStatus === 'ожидание' && data.status === 'выдано') {
+                                restartPolling(18000); // Переключаемся на 18 секунд
+                            }
+                           
+                            // Если статус стал "возвращено", останавливаем polling
+                            if (data.status === 'возвращено') {
+                                stopPolling();
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Ошибка при загрузке статуса:', error);
+                    });
+            }
+           
+            // Функция для обработки удаленного запроса
+            function handleRequestDeleted() {
+                stopPolling();
+                const statusSection = document.getElementById('statusSection');
+                if (statusSection) {
+                    statusSection.innerHTML = `
+                        <div class="status-icon" style="color: #dc3545;">
+                            <i class="bi bi-x-circle"></i>
+                        </div>
+                        <h4><span class="badge bg-danger">Запрос отклонен</span></h4>
+                        <p class="text-muted">Ваш запрос был отклонен библиотекарем</p>
+                    `;
+                }
+            }
+           
+            // Функция для получения текущего статуса
+            function getCurrentStatus() {
+                const badge = document.getElementById('statusBadge');
+                if (!badge) return '';
+                const text = badge.textContent.trim();
+                if (text.includes('Ожидание')) return 'ожидание';
+                if (text.includes('выдана')) return 'выдано';
+                if (text.includes('возвращена')) return 'возвращено';
+                return '';
+            }
+           
+            // Функция для остановки polling
+            function stopPolling() {
+                if (pollingInterval) {
+                    clearInterval(pollingInterval);
+                    pollingInterval = null;
+                }
+            }
+           
+            // Функция для перезапуска polling с новым интервалом
+            function restartPolling(newInterval) {
+                stopPolling();
+                pollingInterval = setInterval(checkForUpdates, newInterval);
+            }
+           
+            // Запускаем polling только для статусов "ожидание" и "выдано"
+            if (initialStatus === 'ожидание' || initialStatus === 'выдано') {
+                // Для "ожидание" - проверка каждые 6 секунд
+                // Для "выдано" - проверка каждые 18 секунд
+                const interval = initialStatus === 'ожидание' ? 6000 : 18000;
+               
+                // Первая проверка через небольшую задержку
+                setTimeout(() => {
+                    checkForUpdates();
+                    // Затем периодически
+                    pollingInterval = setInterval(checkForUpdates, interval);
+                }, 2000);
+            }
+           
+            // Останавливаем polling при уходе со страницы
+            window.addEventListener('beforeunload', stopPolling);
+        })();
+    </script>
 </body>
 </html>

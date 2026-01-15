@@ -98,6 +98,22 @@ def get_books(group_id):
     
     return jsonify(books_list)
 
+@app.route('/get-available-copies/<int:book_id>')
+def get_available_copies(book_id):
+    import re
+    copies = BookCopy.query.filter_by(book_id=book_id, is_available=True).all()
+    # Сортируем по последней числовой группе в copy_code (если есть), иначе по id
+    def numeric_key(c):
+        nums = re.findall(r"\d+", c.copy_code)
+        if nums:
+            try:
+                return int(nums[-1])
+            except:
+                return c.id
+        return c.id
+    copies_sorted = sorted(copies, key=numeric_key)
+    return jsonify([c.copy_code for c in copies_sorted])
+
 @app.route('/search-students')
 def search_students():
     query = request.args.get('q', '').strip()
@@ -330,6 +346,9 @@ def confirm_issue(request_id):
             copy.current_request_id = book_request.id
             copy.is_available = False
         
+        # Сохраняем фактически выданные коды, чтобы они оставались видимыми после возврата
+        book_request.issued_copy_codes = ','.join([c.copy_code for c in reserved_copies])
+
         book_request.status = 'выдано'
         book_request.issue_date = datetime.now()
         book_request.planned_return_date = datetime.now() + timedelta(days=14)
@@ -418,6 +437,51 @@ def check_status():
             flash('Запрос не найден')
     
     return render_template('check_status.html')
+
+@app.route('/api/request-status/<int:request_id>')
+def get_request_status(request_id):
+    """API endpoint для получения статуса запроса в формате JSON (для real-time обновления)"""
+    try:
+        book_request = BookRequest.query.get(request_id)
+        if not book_request:
+            return jsonify({'found': False}), 404
+        
+        return jsonify({
+            'found': True,
+            'id': book_request.id,
+            'status': book_request.status,
+            'quantity': book_request.quantity,
+            'assigned_copy_codes': book_request.assigned_copy_codes,
+            'request_date': book_request.request_date.isoformat() if book_request.request_date else None,
+            'issue_date': book_request.issue_date.isoformat() if book_request.issue_date else None,
+            'actual_return_date': book_request.actual_return_date.isoformat() if book_request.actual_return_date else None,
+            'planned_return_date': book_request.planned_return_date.isoformat() if book_request.planned_return_date else None
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/request-last-modified/<int:request_id>')
+def get_request_last_modified(request_id):
+    """API endpoint для получения времени последнего изменения запроса (lightweight для polling)"""
+    try:
+        book_request = BookRequest.query.get(request_id)
+        if not book_request:
+            return jsonify({'found': False}), 404
+        
+        # Используем самую позднюю дату (issue_date, return_date или request_date)
+        last_modified = book_request.request_date
+        if book_request.issue_date and book_request.issue_date > last_modified:
+            last_modified = book_request.issue_date
+        if book_request.actual_return_date and book_request.actual_return_date > last_modified:
+            last_modified = book_request.actual_return_date
+        
+        return jsonify({
+            'found': True,
+            'last_modified': last_modified.isoformat() if last_modified else None,
+            'status': book_request.status
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/admin/filter', methods=['GET'])
 @admin_required

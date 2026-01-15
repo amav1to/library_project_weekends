@@ -89,6 +89,8 @@ class BookRequest(db.Model):
     
     # Новое поле: коды, запрошенные студентом (строка через запятую)
     requested_copy_codes = db.Column(db.String(500), nullable=True)
+    # Сохраняет коды, которые были фактически выданы (чтобы оставлять их видимыми после возврата)
+    issued_copy_codes = db.Column(db.String(500), nullable=True)
     
     book = db.relationship('Book', backref='requests')
     
@@ -97,7 +99,10 @@ class BookRequest(db.Model):
         # Для ожидания — показываем запрошенные студентом
         if self.status == 'ожидание' and self.requested_copy_codes:
             return self.requested_copy_codes.replace(',', ', ')
-        # Для выданных/возвращённых — реальные привязанные
+        # Для выданных/возвращённых — показываем сохранённые выданные коды, если они есть
+        if self.issued_copy_codes:
+            return self.issued_copy_codes.replace(',', ', ')
+        # В крайнем случае — проверяем текущие привязанные копии
         copies = BookCopy.query.filter_by(current_request_id=self.id).all()
         return ', '.join([copy.copy_code for copy in copies]) if copies else "-"
     
